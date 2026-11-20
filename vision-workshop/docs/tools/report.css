@@ -1,0 +1,68 @@
+/* VISION LAB öğrenci raporu - baskı stili (A4) */
+@page { size: A4; margin: 14mm 14mm 15mm 14mm;
+  @bottom-center { content: counter(page); font: 8.5pt "Helvetica Neue", Arial, sans-serif; color: #6b7280; }
+  @bottom-left { content: "VISION LAB — Kameradan Etkileşime"; font: 8pt "Helvetica Neue", Arial, sans-serif; color: #9ca3af; }
+}
+@page :first { @bottom-center { content: none; } @bottom-left { content: none; } }
+@page wide { size: A4 landscape; margin: 11mm 11mm 13mm 11mm; }
+
+:root { --ink: #111827; --muted: #4b5563; --teal: #0f766e; --blue: #1d4ed8; --line: #d1d5db; --soft: #f3f4f6; }
+html { font-size: 9pt; }
+body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); line-height: 1.36;
+       margin: 0; max-width: none; padding: 0; hyphens: auto; background: #fff; }
+header#title-block-header { padding: 22mm 0 5mm; border-bottom: 2px solid var(--teal); margin-bottom: 7mm; }
+h1.title { border-top: none; padding-top: 0; font-size: 25pt; letter-spacing: -0.5pt; margin: 0 0 3mm; color: #0b1324; line-height: 1.1; }
+p.subtitle { font-size: 13pt; color: var(--teal); margin: 0; font-weight: 500; }
+nav#TOC { break-after: page; font-size: 9pt; columns: 2; column-gap: 10mm; margin-top: 4mm; border-top: 1px solid #d1d5db; padding-top: 1mm; }
+nav#TOC > ul { margin: 0; padding-left: 0; list-style: none; }
+nav#TOC ul ul { padding-left: 4mm; list-style: none; color: var(--muted); font-size: 8.8pt; }
+nav#TOC li { margin: 0.6mm 0; break-inside: avoid; }
+nav#TOC a { color: var(--ink); text-decoration: none; }
+nav#TOC::before { content: "İçindekiler"; display: block; font-weight: 700; font-size: 12pt; margin: 2mm 0 3mm; column-span: all; }
+
+h1 { font-size: 15pt; color: #0b1324; margin: 5mm 0 2mm; padding-top: 2mm; border-top: 1px solid var(--line);
+     break-after: avoid; }
+h2 { font-size: 11.5pt; color: var(--teal); margin: 4mm 0 1.5mm; break-after: avoid; }
+h3 { font-size: 10.5pt; margin: 4mm 0 1.5mm; break-after: avoid; }
+p { margin: 0 0 1.8mm; orphans: 3; widows: 3; }
+ul, ol { margin: 0 0 2.5mm; padding-left: 5.5mm; }
+li { margin: 0.5mm 0; }
+a { color: var(--blue); text-decoration: none; word-break: break-word; }
+strong { color: #0b1324; }
+
+table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 3mm; font-size: 8pt; break-inside: auto; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { background: #e6f2f0; color: #0b1324; text-align: left; font-weight: 600; }
+th, td { border: 0.6pt solid var(--line); padding: 0.8mm 1.4mm; vertical-align: top; }
+td code, th code { font-size: 7.8pt; }
+
+code { font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 8.3pt; background: var(--soft);
+       padding: 0 0.6mm; border-radius: 2px; }
+pre { background: #f6f7f8; border: 0.6pt solid #e5e7eb; border-left: 2.5pt solid var(--teal); padding: 1.8mm 2.6mm;
+      margin: 1.2mm 0 3mm; white-space: pre-wrap; word-break: break-word; break-inside: avoid; font-size: 8pt;
+      line-height: 1.38; }
+pre code { background: none; padding: 0; font-size: 7.7pt; }
+.sourceCode .co { color: #6b7280; font-style: italic; }
+.sourceCode .kw, .sourceCode .cf { color: #1d4ed8; }
+.sourceCode .st { color: #047857; }
+.sourceCode .dv, .sourceCode .fl { color: #b45309; }
+
+figure { margin: 3mm auto 4mm; text-align: center; break-inside: avoid; }
+figure img { max-width: 100%; }
+figcaption { font-size: 8.4pt; color: var(--muted); margin-top: 1.5mm; }
+
+.kunye { font-size: 9.2pt; color: var(--muted); line-height: 1.7; margin: 0 0 5mm; }
+.uyari { border: 1pt solid #f59e0b; background: #fffbeb; padding: 2.5mm 3.5mm; margin: 3mm 0 4mm; border-radius: 2px;
+         font-size: 9pt; break-inside: avoid; }
+.uyari p { margin: 0; }
+.landscape { page: wide; }
+.landscape table { font-size: 6.5pt; line-height: 1.22; margin: 1mm 0 0; }
+.landscape th, .landscape td { padding: 0.9mm 1.1mm; }
+.landscape p { font-size: 8.5pt; margin-bottom: 1.5mm; }
+.placeholder { color: #b45309; }
+.landscape h1 { border-top: none; margin-top: 0; padding-top: 0; font-size: 13pt; }
+.landscape td code { font-size: 6.2pt; }
+.landscape td:nth-child(2) { width: 15%; }
+.landscape td:nth-child(2) a { word-break: break-all; font-size: 6.3pt; }
+.landscape td:nth-child(1) { width: 7%; }

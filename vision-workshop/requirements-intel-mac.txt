@@ -1,0 +1,9 @@
+# VISION LAB - Intel işlemcili Mac (x86_64) için yedek bağımlılıklar
+# mediapipe 0.10.30 ve sonrası yalnızca Apple Silicon (arm64) için macOS
+# paketi yayımlıyor. Intel Mac'lerde kurulabilen son sürüm 0.10.21'dir.
+# Bu sürüm numpy<2 ister ve Python 3.9-3.12 destekler.
+# Kontrol tarihi: 2026-10-19
+mediapipe==0.10.21
+opencv-contrib-python==4.11.0.86
+numpy>=1.26,<2
+pillow>=10.0

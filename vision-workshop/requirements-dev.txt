@@ -1,0 +1,3 @@
+# Testler için (isteğe bağlı)
+-r requirements.txt
+pytest>=8.0

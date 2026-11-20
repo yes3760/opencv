@@ -1,0 +1,11 @@
+# VISION LAB - çekirdek bağımlılıklar
+# Test edilen ortam: Python 3.12 (Windows x64, macOS Apple Silicon)
+# Kontrol tarihi: 2026-10-19
+#
+# Not: MediaPipe, OpenCV'yi "opencv-contrib-python" paketi olarak ister.
+# Aynı ortama ayrıca "opencv-python" kurmayın; iki paket aynı cv2 modülünü
+# paylaştığı için çakışır.
+mediapipe==1.1.1
+opencv-contrib-python==4.14.0.94
+numpy>=2.0,<3
+pillow>=10.0
