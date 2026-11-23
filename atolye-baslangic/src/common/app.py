@@ -30,9 +30,11 @@ class DisplayLoop:
 
     Program şu durumlarda kapanır: q veya Esc tuşu, pencerenin kapatılması,
     --max-frames sınırına ulaşılması.
+    'f' tuşu: labın amacını ve tuşlarını gösteren Özellikler panelini açar/kapatır.
     """
 
-    def __init__(self, window: str, args: argparse.Namespace) -> None:
+    def __init__(self, window: str, args: argparse.Namespace,
+                 help_title: str = "", help_lines: list[str] | None = None) -> None:
         self.window = window
         self.max_frames = args.max_frames
         self.snapshot = Path(args.snapshot) if args.snapshot else None
@@ -40,18 +42,49 @@ class DisplayLoop:
         self.running = True
         self.last_key = -1
         self._last_image: np.ndarray | None = None
-        cv2.namedWindow(self.window, cv2.WINDOW_AUTOSIZE)
+        self.help_title = help_title or window
+        self.help_lines: list[str] = list(help_lines) if help_lines else []
+        self.show_help = False
+        self._sized = False
+        flags = cv2.WINDOW_NORMAL
+        if hasattr(cv2, "WINDOW_KEEPRATIO"):
+            flags |= cv2.WINDOW_KEEPRATIO
+        cv2.namedWindow(self.window, flags)
+
+    def set_help(self, title: str, lines: list[str]) -> None:
+        """Özellikler/Yardım menüsü metinlerini çalışma sırasında günceller."""
+        self.help_title = title
+        self.help_lines = list(lines)
 
     def on_mouse(self, callback) -> None:
         """callback(event, x, y, flags, param) imzasında bir fonksiyon bağlar."""
         cv2.setMouseCallback(self.window, callback)
 
+    def _fit_window(self, image: np.ndarray) -> None:
+        """Pencereyi ilk karede görüntünün oranına göre boyutlandırır (üstteki boş şeridi engeller)."""
+        h, w = image.shape[:2]
+        max_w, max_h = 1260, 740
+        scale = min(1.0, max_w / max(w, 1), max_h / max(h, 1))
+        cv2.resizeWindow(self.window, max(320, int(w * scale)), max(240, int(h * scale)))
+        self._sized = True
+
     def show(self, image: np.ndarray) -> int:
-        cv2.imshow(self.window, image)
-        self._last_image = image
+        view = image
+        if self.help_lines:
+            from common.draw import draw_help_badge, draw_help_overlay
+            view = image.copy()
+            if self.show_help:
+                draw_help_overlay(view, self.help_title, self.help_lines)
+            draw_help_badge(view, active=self.show_help)
+        if not self._sized:
+            self._fit_window(view)
+        cv2.imshow(self.window, view)
+        self._last_image = view
         key = cv2.waitKey(1) & 0xFF
         self.frames += 1
         self.last_key = key
+        if key in (ord("f"), ord("F")) and self.help_lines:
+            self.show_help = not self.show_help
         # Pencere başka bir uygulamanın arkasında açılabilir; ilk saniyede öne getirilir.
         if self.frames in (1, 30):
             try:

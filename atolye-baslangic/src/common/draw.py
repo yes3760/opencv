@@ -172,8 +172,58 @@ def draw_polyline(img, points, color, thickness: int = 2, fade: bool = False) ->
 
 
 def status_line(img: np.ndarray, text: str, kind: str = "info") -> None:
-    """Görüntünün altına durum mesajı yazar. kind: info, ok, warn, error."""
+    """Görüntünün altına taşmadan durum mesajı yazar. kind: info, ok, warn, error."""
     color = {"ok": TEAL, "warn": AMBER, "error": RED}.get(kind, WHITE)
     h, w = img.shape[:2]
-    panel(img, 0, h - 34, w, h, alpha=0.75)
-    put_text(img, text, (12, h - 28), size=18, color=color)
+    bar_h = 38
+    panel(img, 0, h - bar_h, w, h, alpha=0.82)
+    cv2.line(img, (0, h - bar_h), (w, h - bar_h), (65, 58, 52), 1)
+    put_text(img, text, (12, h - bar_h + 9), size=15, color=color)
+
+
+def draw_help_badge(img: np.ndarray, active: bool = False) -> None:
+    """Sağ üst köşeye zarif '[F] Özellikler' rozeti çizer."""
+    h, w = img.shape[:2]
+    label = "[F] Kapat" if active else "[F] Özellikler"
+    tw, th = text_size(label, 14)
+    bw, bh = tw + 20, th + 10
+    x2 = w - 12
+    x1 = x2 - bw
+    y1 = 8
+    y2 = y1 + bh
+    if active:
+        cv2.rectangle(img, (x1, y1), (x2, y2), TEAL, -1)
+        put_text(img, label, (x1 + 10, y1 + 4), 14, INK)
+    else:
+        panel(img, x1, y1, x2, y2, alpha=0.78)
+        cv2.rectangle(img, (x1, y1), (x2, y2), TEAL, 1, cv2.LINE_AA)
+        put_text(img, label, (x1 + 10, y1 + 4), 14, TEAL)
+
+
+def draw_help_overlay(img: np.ndarray, title: str, lines: list[str]) -> None:
+    """'f' tuşuna basılınca ekran ortasında amaç ve kullanım rehberi kartı gösterir."""
+    h, w = img.shape[:2]
+    panel(img, 0, 0, w, h, alpha=0.58)
+    card_w = min(w - 48, 660)
+    line_h = 26
+    card_h = min(h - 48, 96 + len(lines) * line_h)
+    x1 = (w - card_w) // 2
+    y1 = (h - card_h) // 2
+    x2, y2 = x1 + card_w, y1 + card_h
+
+    panel(img, x1, y1, x2, y2, alpha=0.92, color=(24, 18, 28))
+    cv2.rectangle(img, (x1, y1), (x2, y2), TEAL, 2, cv2.LINE_AA)
+    cv2.rectangle(img, (x1, y1), (x2, y1 + 42), (38, 30, 44), -1)
+    put_text(img, title or "Özellikler & Kullanım Rehberi", (x1 + 16, y1 + 10), 17, TEAL)
+
+    yy = y1 + 54
+    for line in lines:
+        if yy + 22 > y2 - 34:
+            break
+        col = AMBER if line.startswith("Amaç:") else WHITE
+        put_text(img, line, (x1 + 18, yy), 14, col)
+        yy += line_h
+
+    cv2.line(img, (x1 + 14, y2 - 32), (x2 - 14, y2 - 32), (70, 62, 76), 1)
+    put_text(img, "Kapatmak için [F] tuşuna tekrar basın   ·   Çıkış: [Q] veya [Esc]",
+             (x1 + 18, y2 - 24), 13, GRAY)

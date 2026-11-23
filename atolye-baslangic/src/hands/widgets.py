@@ -94,19 +94,21 @@ class ButtonBar:
 
 
 class DrawingCanvas:
-    """İşaret parmağı jestinde çizim yapan katman."""
+    """İşaret parmağı jestinde çok renkli ve ayarlanabilir kalınlıkta çizim yapan katman."""
 
     def __init__(self, width: int, height: int) -> None:
         self.layer = np.zeros((height, width, 3), np.uint8)
         self._last = None
 
-    def update(self, cursor, drawing: bool) -> None:
+    def update(self, cursor, drawing: bool, color=VIOLET, thickness: int = 5) -> None:
         if not drawing or cursor is None:
             self._last = None
             return
         point = (int(cursor[0]), int(cursor[1]))
         if self._last is not None:
-            cv2.line(self.layer, self._last, point, VIOLET, 5, cv2.LINE_AA)
+            cv2.line(self.layer, self._last, point, color, max(2, int(thickness)), cv2.LINE_AA)
+        else:
+            cv2.circle(self.layer, point, max(2, int(thickness) // 2), color, -1, cv2.LINE_AA)
         self._last = point
 
     def clear(self) -> None:

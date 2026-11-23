@@ -110,7 +110,18 @@ def main() -> None:
 
     try:
         with Camera(args.source, config.CAPTURE_WIDTH, config.CAPTURE_HEIGHT) as cam, \
-                DisplayLoop("VISION LAB", args) as loop:
+                DisplayLoop(
+                    "VISION LAB",
+                    args,
+                    help_title="VISION LAB — Birleşik Uygulama",
+                    help_lines=[
+                        "Amaç: Yüz, El ve Cilt analizi modüllerini tek bir canlı akışta deneyimlemek.",
+                        "• [1] Yüz  ·  [2] El  ·  [3] Cilt  ·  [4] Birleşik modları arasında geçiş yap.",
+                        "• [Boşluk] Cilt modunda kalite uygunken tek kare ısı haritası analizi alır.",
+                        "• [El ile] İşaret parmağını üstteki düğmeye getirip Pinch (çimdik) ile tıkla.",
+                        "• [c] Yüz hareket izini temizler  ·  [F] Bu rehberi açar/kapatır.",
+                    ],
+                ) as loop:
             loop.on_mouse(on_mouse)
             where = f" (kamera {cam.index})" if cam.index is not None else ""
             print(f"Kamera açıldı: {cam.actual_size[0]}x{cam.actual_size[1]}{where}")
