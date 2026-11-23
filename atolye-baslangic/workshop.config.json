@@ -1,0 +1,13 @@
+{
+  "_aciklama": "Organizasyon bilgileri yalnızca bu dosyadan düzenlenir. Rapor (docs/tools/build_report.py) ve web sunumu (presentation) bu değerleri kullanır. Boş bırakılan alanlar köşeli parantezli yer tutucu olarak görünür.",
+  "egitim_adi": "VISION LAB — Kameradan Etkileşime",
+  "alt_baslik": "OpenCV ile Yüz, El ve Cilt Görünümü Analizi",
+  "universite": "",
+  "topluluk": "",
+  "egitmen": "",
+  "sponsor": "",
+  "tarih": "",
+  "yer": "",
+  "iletisim": "",
+  "depo_baglantisi": ""
+}

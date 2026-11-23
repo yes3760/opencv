@@ -1,0 +1,1 @@
+"""Modüllerin ortak kullandığı yardımcılar."""
