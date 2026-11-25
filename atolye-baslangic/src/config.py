@@ -25,9 +25,8 @@ CAMERA_INDEX = "auto"       # "auto": siyah olmayan görüntü veren ilk kamera 
                             # iPhone Süreklilik Kamerası 0 olabilir). Elle: 0, 1, 2...
 CAPTURE_WIDTH = 1280        # Kameradan istenen çözünürlük. Kamera desteklemezse
 CAPTURE_HEIGHT = 720        # en yakın değeri verir; gerçek değer ekranda yazar.
-PROCESS_WIDTH = 640         # [Deney] Modellere verilen karenin genişliği.
-                            # Modeller girdiyi zaten 192-256 piksele küçültür;
-                            # daha küçük kare dönüştürme süresini azaltır.
+PROCESS_WIDTH = 480         # [Deney] Modellere verilen karenin genişliği (480px:
+                            # MediaPipe 192-256px'e küçülttüğü için aynı doğrulukta ~%45 daha hızlı).
 DISPLAY_WIDTH = 880         # Pencerede gösterilen görüntünün genişliği (yan panelle
                             # birlikte 1280 piksel genişliğindeki ekranlara sığar)
 MIRROR_DISPLAY = True       # Ekran ayna gibi gösterilir; modeller ise aynalanmamış

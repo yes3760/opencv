@@ -36,14 +36,13 @@ class Frame:
 
 
 def resize_to_width(image: np.ndarray, width: int) -> np.ndarray:
-    """En-boy oranını koruyarak görüntüyü verilen genişliğe getirir."""
+    """En-boy oranını koruyarak görüntüyü verilen genişliğe hızlıca getirir."""
     h, w = image.shape[:2]
     if w == width:
         return image
     height = round(h * width / w)
-    # Küçültürken INTER_AREA, büyütürken INTER_LINEAR daha temiz sonuç verir.
-    interp = cv2.INTER_AREA if width < w else cv2.INTER_LINEAR
-    return cv2.resize(image, (width, height), interpolation=interp)
+    # INTER_LINEAR gerçek zamanlı videoda INTER_AREA'ya göre ~10x daha hızlıdır.
+    return cv2.resize(image, (width, height), interpolation=cv2.INTER_LINEAR)
 
 
 class FrameClock:

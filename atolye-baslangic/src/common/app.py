@@ -72,8 +72,8 @@ class DisplayLoop:
         view = image
         if self.help_lines:
             from common.draw import draw_help_badge, draw_help_overlay
-            view = image.copy()
             if self.show_help:
+                view = image.copy()
                 draw_help_overlay(view, self.help_title, self.help_lines)
             draw_help_badge(view, active=self.show_help)
         if not self._sized:
@@ -93,7 +93,7 @@ class DisplayLoop:
                 pass
         if key in (ord("q"), 27):
             self.running = False
-        elif self.frames > 1 and cv2.getWindowProperty(self.window, cv2.WND_PROP_VISIBLE) < 1:
+        elif self.frames > 1 and (self.frames % 12 == 0) and cv2.getWindowProperty(self.window, cv2.WND_PROP_VISIBLE) < 1:
             self.running = False          # pencere çarpı düğmesiyle kapatıldı
         elif self.max_frames and self.frames >= self.max_frames:
             self.running = False

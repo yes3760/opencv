@@ -16,6 +16,7 @@ ilk kamerayı seçer.
 from __future__ import annotations
 
 import platform
+import threading
 import time
 from pathlib import Path
 
@@ -62,6 +63,11 @@ class Camera:
         self._still: np.ndarray | None = None     # fotoğraf kaynağı için
         self.is_file = not isinstance(self.source, int) and self.source != "auto"
         self.index: int | None = None              # açılan kameranın numarası
+        self._lock = threading.Lock()
+        self._latest: np.ndarray | None = None
+        self._grab_stop = threading.Event()
+        self._grab_thread: threading.Thread | None = None
+        self._first_ready = threading.Event()
 
     # -- açma -------------------------------------------------------------
     def open(self) -> "Camera":
@@ -69,9 +75,32 @@ class Camera:
             self._open_file(Path(self.source))
         elif self.source == "auto":
             self._open_auto()
+            self._start_grabber()
         else:
             self._open_camera(int(self.source))
+            self._start_grabber()
         return self
+
+    def _start_grabber(self) -> None:
+        """Canlı kameradan arka planda hep en güncel kareyi okur (kasmayı ve gecikmeyi önler)."""
+        if self._cap is None:
+            return
+        self._grab_stop.clear()
+        self._first_ready.clear()
+
+        def _loop() -> None:
+            while not self._grab_stop.is_set() and self._cap is not None:
+                ok, frm = self._cap.read()
+                if ok and frm is not None:
+                    with self._lock:
+                        self._latest = frm
+                    self._first_ready.set()
+                else:
+                    time.sleep(0.005)
+
+        self._grab_thread = threading.Thread(target=_loop, daemon=True)
+        self._grab_thread.start()
+        self._first_ready.wait(timeout=2.0)
 
     def _open_file(self, path: Path) -> None:
         if not path.exists():
@@ -99,6 +128,7 @@ class Camera:
                 cap.release()
                 cap = cv2.VideoCapture(index)      # varsayılan arka uçla bir kez daha dene
             if cap.isOpened():
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
                 return cap
@@ -181,11 +211,14 @@ class Camera:
 
     # -- okuma ------------------------------------------------------------
     def read(self) -> np.ndarray | None:
-        """Bir sonraki kareyi döndürür. Kaynak bittiyse veya okunamadıysa None döner."""
+        """En güncel kareyi gecikmesiz döndürür. Kaynak bittiyse None döner."""
         if self._still is not None:
             return self._still.copy()
         if self._cap is None:
             raise CameraError("Önce open() çağrılmalı.")
+        if self._grab_thread is not None:
+            with self._lock:
+                return self._latest.copy() if self._latest is not None else None
         ok, frame = self._cap.read()
         if not ok and self.is_file:
             # Video bitti: eğitim sırasında kesintisiz göstermek için başa sar.
@@ -209,10 +242,15 @@ class Camera:
 
     # -- kapatma ----------------------------------------------------------
     def release(self) -> None:
-        """Kamerayı serbest bırakır; kamera ışığı sönmelidir."""
+        """Arka plan okuyucuyu durdurur ve kamerayı serbest bırakır; kamera ışığı sönmelidir."""
+        self._grab_stop.set()
+        if self._grab_thread is not None:
+            self._grab_thread.join(timeout=1.0)
+            self._grab_thread = None
         if self._cap is not None:
             self._cap.release()
             self._cap = None
+        self._latest = None
         self._still = None
 
     def __enter__(self) -> "Camera":
