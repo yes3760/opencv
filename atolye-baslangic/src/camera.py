@@ -1,17 +1,4 @@
-"""Kamera, video veya fotoğraftan kare okuma.
-
-Girdi : "auto" (görüntü veren ilk kamera), kamera numarası (ör. 0) ya da bir dosya yolu
-Çıktı : BGR renk sırasında, uint8 tipinde NumPy dizisi (yükseklik, genişlik, 3)
-Görev : Kaynağı açmak, kareyi okumak ve iş bitince kamerayı serbest bırakmak.
-
-Kullanım:
-    with Camera("auto") as cam:
-        frame = cam.read()
-
-Bir bilgisayarda birden fazla kamera olabilir (ör. Mac'te iPhone Süreklilik Kamerası).
-0 numara her zaman dahili kamera değildir; "auto" seçeneği siyah olmayan görüntü veren
-ilk kamerayı seçer.
-"""
+"""Kamera, video veya fotoğraftan kare okuma (Windows DSHOW/MSMF + macOS AVFoundation tam uyumlu)."""
 
 from __future__ import annotations
 
@@ -24,26 +11,30 @@ import cv2
 import numpy as np
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
-BLACK_MEAN = 5.0        # ortalama parlaklığı bunun altında olan kare "siyah" sayılır (0-255)
-MAX_AUTO_INDEX = 4      # "auto" seçeneğinin deneyeceği kamera numarası sayısı
+BLACK_MEAN = 5.0
+MAX_AUTO_INDEX = 4
 
 
 class CameraError(RuntimeError):
     """Kamera açılamadığında veya görüntü alınamadığında fırlatılır."""
 
 
-def _preferred_backend() -> int:
-    """İşletim sistemine uygun OpenCV kamera arka ucunu seçer."""
+def _candidate_backends() -> list[int | None]:
+    """İşletim sistemine göre denenecek tüm kamera arka uçlarını sırayla döndürür."""
     system = platform.system()
     if system == "Windows":
-        return cv2.CAP_DSHOW          # Windows'ta genellikle daha hızlı açılır.
+        out: list[int | None] = []
+        for attr in ("CAP_DSHOW", "CAP_MSMF"):
+            if hasattr(cv2, attr):
+                out.append(getattr(cv2, attr))
+        out.append(None)
+        return out
     if system == "Darwin":
-        return cv2.CAP_AVFOUNDATION   # macOS'un kamera arayüzü
-    return cv2.CAP_ANY
+        return [cv2.CAP_AVFOUNDATION, None]
+    return [None]
 
 
 def parse_source(text: str | int) -> int | str:
-    """'0' gibi bir metni kamera numarasına çevirir; 'auto' ve dosya yolları metin kalır."""
     if isinstance(text, int):
         return text
     text = text.strip()
@@ -53,23 +44,22 @@ def parse_source(text: str | int) -> int | str:
 
 
 class Camera:
-    """Tek bir görüntü kaynağını yönetir. Aynı anda yalnızca bir nesne kamerayı açmalıdır."""
+    """Tek bir görüntü kaynağını yönetir."""
 
     def __init__(self, source: int | str = "auto", width: int = 1280, height: int = 720):
         self.source = parse_source(source)
         self.width = width
         self.height = height
         self._cap: cv2.VideoCapture | None = None
-        self._still: np.ndarray | None = None     # fotoğraf kaynağı için
+        self._still: np.ndarray | None = None
         self.is_file = not isinstance(self.source, int) and self.source != "auto"
-        self.index: int | None = None              # açılan kameranın numarası
+        self.index: int | None = None
         self._lock = threading.Lock()
         self._latest: np.ndarray | None = None
         self._grab_stop = threading.Event()
         self._grab_thread: threading.Thread | None = None
         self._first_ready = threading.Event()
 
-    # -- açma -------------------------------------------------------------
     def open(self) -> "Camera":
         if self.is_file:
             self._open_file(Path(self.source))
@@ -82,7 +72,6 @@ class Camera:
         return self
 
     def _start_grabber(self) -> None:
-        """Canlı kameradan arka planda hep en güncel kareyi okur (kasmayı ve gecikmeyi önler)."""
         if self._cap is None:
             return
         self._grab_stop.clear()
@@ -91,7 +80,7 @@ class Camera:
         def _loop() -> None:
             while not self._grab_stop.is_set() and self._cap is not None:
                 ok, frm = self._cap.read()
-                if ok and frm is not None:
+                if ok and frm is not None and frm.size > 0:
                     with self._lock:
                         self._latest = frm
                     self._first_ready.set()
@@ -116,42 +105,8 @@ class Camera:
             raise CameraError(f"Video açılamadı: {path}")
         self._cap = cap
 
-    def _connect(self, index: int, wait_for_permission: bool) -> cv2.VideoCapture:
-        """Kamerayı açar. macOS ilk çalıştırmada izin sorar; OpenCV cevabı beklemeden hata
-        verdiği için macOS'ta izin penceresi yanıtlanana kadar birkaç saniye denenir."""
-        is_mac = platform.system() == "Darwin"
-        deadline = time.monotonic() + (20.0 if is_mac and wait_for_permission else 0.0)
-        announced = False
-        while True:
-            cap = cv2.VideoCapture(index, _preferred_backend())
-            if not cap.isOpened():
-                cap.release()
-                cap = cv2.VideoCapture(index)      # varsayılan arka uçla bir kez daha dene
-            if cap.isOpened():
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-                return cap
-            cap.release()
-            if time.monotonic() >= deadline:
-                raise CameraError(
-                    f"Kamera {index} açılamadı. Olası nedenler: kamera başka bir uygulamada "
-                    "açık (Zoom, Teams, tarayıcı), kamera izni verilmemiş veya numara yanlış. "
-                    + ("macOS'ta Sistem Ayarları > Gizlilik ve Güvenlik > Kamera bölümünde "
-                       "programı başlattığınız uygulamaya (Terminal, VS Code, Claude) izin verip "
-                       "programı yeniden başlatın. " if is_mac else "")
-                    + "Farklı numara için: --source 1"
-                )
-            if not announced:
-                print("Kamera izni bekleniyor: macOS izin penceresinde 'İzin Ver' seçilirse "
-                      "kamera açılır (en fazla 20 saniye)...")
-                announced = True
-            time.sleep(1.0)
-
     @staticmethod
-    def _brightness(cap: cv2.VideoCapture, frames: int = 20, timeout: float = 3.0) -> float | None:
-        """Birkaç kare okuyup en yüksek ortalama parlaklığı döndürür; kare gelmezse None.
-        Otomatik pozlama ilk karelerde ayarlandığı için tek kareye bakılmaz."""
+    def _brightness(cap: cv2.VideoCapture, frames: int = 20, timeout: float = 2.8) -> float | None:
         best, got = None, 0
         deadline = time.monotonic() + timeout
         while got < frames and time.monotonic() < deadline:
@@ -160,58 +115,95 @@ class Camera:
                 got += 1
                 mean = float(frame.mean())
                 best = mean if best is None else max(best, mean)
-                if mean >= BLACK_MEAN and got >= 3:
+                if mean >= BLACK_MEAN and got >= 2:
                     break
             else:
-                time.sleep(0.05)
+                time.sleep(0.04)
         return best
 
-    def _open_camera(self, index: int) -> None:
-        cap = self._connect(index, wait_for_permission=True)
-        brightness = self._brightness(cap)
-        if brightness is None:
+    def _try_open_single(self, index: int, backend: int | None) -> tuple[cv2.VideoCapture | None, float | None]:
+        """Tek bir (index, backend) çiftini dener; çözünürlük ayarı bozarsa doğal çözünürlüğe döner."""
+        cap = cv2.VideoCapture(index) if backend is None else cv2.VideoCapture(index, backend)
+        if not cap.isOpened():
             cap.release()
-            raise CameraError(
-                "Kamera açıldı ancak görüntü gelmedi. macOS'ta Sistem Ayarları > Gizlilik ve "
-                "Güvenlik > Kamera bölümünden programı başlattığınız uygulamaya izin verin; "
-                "Windows'ta Ayarlar > Gizlilik > Kamera bölümünü kontrol edin."
-            )
-        if brightness < BLACK_MEAN:
-            print(f"Uyarı: kamera {index} siyah görüntü veriyor. Mercek kapalı olabilir veya bu "
-                  "numara başka bir kameraya (ör. iPhone) ait olabilir. Otomatik seçim için: "
-                  "--source auto, elle: --source 1")
-        self._cap, self.index = cap, index
+            return None, None
+
+        # Windows'ta MJPG + çözünürlük dene; kare gelmezse doğal (varsayılan) çözünürlükle yeniden aç!
+        if platform.system() == "Windows":
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        else:
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+
+        br = self._brightness(cap, frames=12, timeout=1.8)
+        if br is not None:
+            return cap, br
+
+        # Çözünürlük zorlaması bu Windows sürücüsünü kilitlediyse dokunmadan doğal çözünürlükte aç!
+        cap.release()
+        cap2 = cv2.VideoCapture(index) if backend is None else cv2.VideoCapture(index, backend)
+        if not cap2.isOpened():
+            cap2.release()
+            return None, None
+        br2 = self._brightness(cap2, frames=15, timeout=2.2)
+        if br2 is not None:
+            return cap2, br2
+        cap2.release()
+        return None, None
+
+    def _open_camera(self, index: int) -> None:
+        fallback_cap = None
+        for backend in _candidate_backends():
+            cap, br = self._try_open_single(index, backend)
+            if cap is not None and br is not None:
+                if br >= BLACK_MEAN:
+                    if fallback_cap is not None:
+                        fallback_cap.release()
+                    self._cap, self.index = cap, index
+                    return
+                if fallback_cap is None:
+                    fallback_cap = cap
+                else:
+                    cap.release()
+        if fallback_cap is not None:
+            self._cap, self.index = fallback_cap, index
+            return
+        raise CameraError(
+            f"Kamera {index} açılamadı! Windows'ta kontrol edin:\n"
+            "  1) Ayarlar > Gizlilik ve Güvenlik > Kamera > 'Masaüstü uygulamalarının erişmesine izin ver' AÇIK olmalı.\n"
+            "  2) Klavyedeki kamera kapatma tuşu (F8/F10) veya fiziksel kapak kapalı olmamalı.\n"
+            "  3) Zoom / Teams / Tarayıcı kamerayı kullanıyor olabilir.\n"
+            "  4) Farklı kamera için: --source 1 veya --source auto deneyin."
+        )
 
     def _open_auto(self) -> None:
-        """Siyah olmayan görüntü veren ilk kamerayı seçer."""
         fallback: tuple[cv2.VideoCapture, int] | None = None
-        first_error: CameraError | None = None
         for index in range(MAX_AUTO_INDEX):
-            try:
-                cap = self._connect(index, wait_for_permission=(index == 0))
-            except CameraError as exc:
-                first_error = first_error or exc
-                continue
-            brightness = self._brightness(cap)
-            if brightness is not None and brightness >= BLACK_MEAN:
-                if fallback is not None:
-                    fallback[0].release()
-                self._cap, self.index = cap, index
-                return
-            if brightness is not None and fallback is None:
-                fallback = (cap, index)            # görüntü siyah ama kamera çalışıyor
-            else:
-                cap.release()
+            for backend in _candidate_backends():
+                cap, br = self._try_open_single(index, backend)
+                if cap is None or br is None:
+                    continue
+                if br >= BLACK_MEAN:
+                    if fallback is not None:
+                        fallback[0].release()
+                    self._cap, self.index = cap, index
+                    return
+                if fallback is None:
+                    fallback = (cap, index)
+                else:
+                    cap.release()
         if fallback is not None:
             self._cap, self.index = fallback
-            print(f"Uyarı: hiçbir kamera aydınlık görüntü vermedi; kamera {self.index} kullanılıyor. "
-                  "Mercek kapalı olabilir veya ortam çok karanlık.")
             return
-        raise first_error or CameraError("Kullanılabilir bir kamera bulunamadı.")
+        raise CameraError(
+            "Hiçbir kamera açılamadı! Windows'ta kontrol edin:\n"
+            "  1) Ayarlar > Gizlilik ve Güvenlik > Kamera > 'Masaüstü uygulamalarının kameraya erişmesine izin ver' AÇIK olmalı.\n"
+            "  2) Laptop klavyesindeki kamera kapatma tuşu (F8/F10/Fn) veya fiziksel mercek kapağı açık olmalı.\n"
+            "  3) Tarayıcıdaki (Slayt 04 vb.) veya Zoom'daki açık kamerayı kapatın."
+        )
 
-    # -- okuma ------------------------------------------------------------
     def read(self) -> np.ndarray | None:
-        """En güncel kareyi gecikmesiz döndürür. Kaynak bittiyse None döner."""
         if self._still is not None:
             return self._still.copy()
         if self._cap is None:
@@ -221,14 +213,12 @@ class Camera:
                 return self._latest.copy() if self._latest is not None else None
         ok, frame = self._cap.read()
         if not ok and self.is_file:
-            # Video bitti: eğitim sırasında kesintisiz göstermek için başa sar.
             self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             ok, frame = self._cap.read()
         return frame if ok else None
 
     @property
     def actual_size(self) -> tuple[int, int]:
-        """Kaynağın gerçekte verdiği (genişlik, yükseklik)."""
         if self._still is not None:
             return self._still.shape[1], self._still.shape[0]
         if self._cap is None:
@@ -240,9 +230,7 @@ class Camera:
     def is_open(self) -> bool:
         return self._still is not None or (self._cap is not None and self._cap.isOpened())
 
-    # -- kapatma ----------------------------------------------------------
     def release(self) -> None:
-        """Arka plan okuyucuyu durdurur ve kamerayı serbest bırakır; kamera ışığı sönmelidir."""
         self._grab_stop.set()
         if self._grab_thread is not None:
             self._grab_thread.join(timeout=1.0)
