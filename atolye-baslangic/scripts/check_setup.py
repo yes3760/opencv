@@ -8,6 +8,9 @@ yüklenmesi ve (istenirse) kameranın açılıp kapanması. Görüntü kaydedilm
 """
 
 import argparse
+import os
+
+os.environ.setdefault("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS", "0")
 import platform
 import sys
 import time
