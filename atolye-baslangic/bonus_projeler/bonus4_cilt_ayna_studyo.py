@@ -1,35 +1,34 @@
-"""BONUS PROJE 4 — SEIS Akıllı Cilt Aynası & A/B Işık Karşılaştırma Stüdyosu
+"""BONUS PROJE 4 — Işık Kamerayı Nasıl Yanıltır? (1. Çekim vs 2. Çekim Cilt Deneyi)
 
-Mevcut vision-workshop ortamındaki FaceTracker + SkinAnalyzer ile çalışır;
-ek kütüphane veya yeni model indirmenize gerek yoktur.
+Amaç (Çok Basit!):
+  Sosyal medyadaki veya uygulamalardaki 'yapay zekâ cilt analizi' araçlarının
+  sadece ışık açısı değiştiğinde nasıl farklı sonuçlar verdiğini canlı kanıtlamak!
 
-Özellikler:
-  - Canlı yüz bölgeleri (alın, sağ yanak, sol yanak) önizlemesi ve kalite kontrol kapısı
-  - A / B Işık Karşılaştırma Modu: Aynı kişinin iki farklı ışık açısında (ör. pencereye düz vs yan)
-    Δa*, parlama %, doku ve iki yanak arası ΔE76 değişimini yan yana karşılaştırır!
-  - 4 farklı sabit aralıklı ısı haritası (1: Kızarıklık Δa*, 2: Doku, 3: Renk Farkı ΔE76, 4: Parlama)
-  - Tek tuşla PNG rapor kartı kaydetme (s)
+Nasıl Yapılır?
+  1) Normal dururken [BOŞLUK] tuşuna bas -> 1. Çekim (Normal Işık) alınır.
+  2) Telefon fenerini yüzüne tut (veya pencereye dön) ve tekrar [BOŞLUK] bas -> 2. Çekim alınır.
+  3) Sağ ekranda aynı yüzün sadece ışık değişince nasıl bambaşka sayılar verdiğini gör!
 
-Uyarı: Eğitim amaçlı görüntü analizidir; tıbbi tanı değildir. Görüntüler otomatik kaydedilmez.
+Uyarı: Eğitim amaçlı görüntü analizidir; tıbbi tanı değildir.
 
-Çalıştırma : python Gemini/bonus_projeler/bonus4_cilt_ayna_studyo.py
-Tuşlar     : Boşluk: Kare A / Kare B al  |  1-4: Isı haritası  |  r: Bölge maskesi aç/kapa
-             c: A/B temizle  |  s: Rapor PNG kaydet  |  q: Çıkış
+Çalıştırma : python bonus_projeler/bonus4_cilt_ayna_studyo.py
+Tuşlar     : Boşluk: 1. / 2. Çekimi Al | 1-4: Harita Değiştir | r: Maske | c: Sıfırla | s: PNG Kaydet | q: Çıkış
 """
+
+from __future__ import annotations
 
 import sys
 import time
 from pathlib import Path
 
-import cv2
-import numpy as np
-
-# src klasörünü otomatik bul (hem atolye-baslangic/bonus_projeler hem Gemini/bonus_projeler için)
 for _p in Path(__file__).resolve().parents:
     if (_p / "src").is_dir():
         if str(_p / "src") not in sys.path:
             sys.path.insert(0, str(_p / "src"))
         break
+
+import cv2
+import numpy as np
 
 import config
 from camera import Camera, CameraError
@@ -40,21 +39,65 @@ from common.frame import FramePreparer
 from common.models import ModelMissingError
 from face.tracker import FaceTracker
 from skin.analyzer import SkinAnalyzer, SkinReport
-from skin.metrics import render_heatmap
-from skin.overlay import MAP_KEYS, disclaimer, draw_quality, draw_regions
+from skin.metrics import compute_metrics, render_heatmap
+from skin.overlay import MAP_KEYS, disclaimer, draw_regions
+from skin.regions import build_region_masks
 
-# Afiş renk paleti (BGR)
 PLUM_DARK = (18, 5, 28)
-PLUM_CARD = (32, 10, 48)
+PLUM_CARD = (34, 12, 50)
 MINT = (170, 232, 108)
-CREAM = (218, 236, 247)
-PEACH = (130, 161, 235)
+CREAM = (232, 240, 248)
+PEACH = (130, 175, 245)
 GOLD = (85, 215, 255)
-MUTED = (140, 130, 145)
+MUTED = (165, 155, 170)
+
+HARITA_ADLARI = {
+    MAP_KEYS[0]: "1: Kızarıklık Haritası",
+    MAP_KEYS[1]: "2: Parlama Haritası",
+    MAP_KEYS[2]: "3: Doku / Pürüz Haritası",
+    MAP_KEYS[3]: "4: Renk Tonu Farkı",
+}
+
+HELP_LINES = [
+    "Amaç: Sadece ışık değiştiğinde kameranın cilt ölçümlerinin nasıl değiştiğini kanıtlamak.",
+    "• ADIM 1: Kameraya bak ve [BOŞLUK] tuşuna bas -> 1. Çekim (Normal Işık) kaydedilir.",
+    "• ADIM 2: Telefon flaşını yüzüne tut veya ışığa yan dön, tekrar [BOŞLUK] bas -> 2. Çekim alınır.",
+    "• SONUÇ: Sağdaki tabloda aynı cildin iki ışıkta ne kadar farklı çıktığını karşılaştır!",
+    "• [1-4] Isı haritası seç  ·  [r] Bölge maskesi  ·  [c] Baştan başla  ·  [s] PNG kaydet",
+]
+
+
+def esnek_cekim_al(analyzer: SkinAnalyzer, frame, faces) -> SkinReport | None:
+    """Kalite kapısına takılıp kullanıcıyı bekletmeden tek yüz varsa her zaman çekim üretir."""
+    if len(faces) != 1:
+        return None
+    rep = analyzer.analyze(frame.full_bgr, faces, frame.scale_to_full)
+    if rep.metrics is not None:
+        return rep
+    # Yüz biraz uzak veya açı hafif eğik olsa bile eğitim deneyinde çekimi yine de hesapla
+    if rep.crop is not None and rep.regions is not None:
+        rep.metrics = compute_metrics(rep.crop, rep.regions)
+        return rep
+    face = faces[0]
+    pts_full = face.points * frame.scale_to_full
+    w_full = face.width_px * frame.scale_to_full
+    x1, y1, x2, y2 = [int(v * frame.scale_to_full) for v in face.box]
+    pad = int(w_full * 0.25)
+    H, W = frame.full_bgr.shape[:2]
+    cx1, cy1 = max(0, x1 - pad), max(0, y1 - pad)
+    cx2, cy2 = min(W, x2 + pad), min(H, y2 + pad)
+    crop = frame.full_bgr[cy1:cy2, cx1:cx2].copy()
+    if crop.size == 0:
+        return None
+    local_pts = pts_full - np.array([cx1, cy1], dtype=np.float32)
+    regs = build_region_masks(crop, local_pts, w_full, config.SKIN_ROI_EROSION_RATIO, None)
+    rep.crop = crop
+    rep.regions = regs
+    rep.metrics = compute_metrics(crop, regs)
+    return rep
 
 
 def harita_kucuk(report: SkinReport, map_name: str, max_w: int, max_h: int) -> np.ndarray:
-    """Raporun ısı haritasını aynalayarak panel kutusuna orantılı sığdırır."""
     m = report.metrics
     heat = render_heatmap(report.crop, m.maps[map_name], m.union, map_name)
     if config.MIRROR_DISPLAY:
@@ -62,140 +105,144 @@ def harita_kucuk(report: SkinReport, map_name: str, max_w: int, max_h: int) -> n
     h, w = heat.shape[:2]
     scale = min(max_w / max(w, 1), max_h / max(h, 1))
     nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
-    return cv2.resize(heat, (nw, nh), interpolation=cv2.INTER_AREA)
+    return cv2.resize(heat, (nw, nh), interpolation=cv2.INTER_LINEAR)
 
 
 def ozet_degerler(report: SkinReport) -> dict[str, float]:
-    """Alın ve yanak ortalamalarından karşılaştırma özeti çıkarır."""
     regs = report.metrics.regions
     if not regs:
-        return {"delta_a": 0.0, "shine": 0.0, "texture": 0.0, "cheek_de": 0.0}
+        return {"kizarik": 0.0, "parlama": 0.0, "doku": 0.0, "yanak_fark": 0.0}
     n = len(regs)
     return {
-        "delta_a": sum(r.delta_a for r in regs.values()) / n,
-        "shine": sum(r.shine_percent for r in regs.values()) / n,
-        "texture": sum(r.texture for r in regs.values()) / n,
-        "cheek_de": report.metrics.cheek_delta_e or 0.0,
+        "kizarik": sum(r.delta_a for r in regs.values()) / n,
+        "parlama": sum(r.shine_percent for r in regs.values()) / n,
+        "doku": sum(r.texture for r in regs.values()) / n,
+        "yanak_fark": report.metrics.cheek_delta_e or 0.0,
     }
 
 
-def studiyo_paneli_ciz(
-    kare_a: SkinReport | None,
-    kare_b: SkinReport | None,
+def sag_panel_ciz(
+    cekim_1: SkinReport | None,
+    cekim_2: SkinReport | None,
     map_name: str,
     height: int,
     width: int = 470,
 ) -> np.ndarray:
-    """Sağ tarafta SEIS temalı A/B karşılaştırma ve ısı haritası panelini çizer."""
+    """Yüksekliğe tam duyarlı, hiçbir satırı taşmayan sade Türkçe karşılaştırma paneli."""
     out = np.full((height, width, 3), PLUM_DARK, np.uint8)
+    cv2.line(out, (0, 0), (0, height), (80, 50, 95), 2)
 
-    # Üst başlık şeridi
-    cv2.rectangle(out, (0, 0), (width, 54), PLUM_CARD, -1)
-    cv2.line(out, (0, 54), (width, 54), MINT, 1)
-    put_text(out, "SEIS AKILLI CİLT AYNASI · A/B STÜDYO", (14, 10), 15, MINT)
-    put_text(out, f"Harita [1-4]: {map_name}", (14, 32), 13, CREAM)
+    # Üst başlık (sağ üstteki [F] Özellikler rozetine çarpmaması için solda hizalı)
+    cv2.rectangle(out, (2, 0), (width, 56), PLUM_CARD, -1)
+    cv2.line(out, (0, 56), (width, 56), MINT, 1)
+    put_text(out, "IŞIK DENEYİ: 1. ÇEKİM vs 2. ÇEKİM", (14, 9), 15, MINT)
+    put_text(out, HARITA_ADLARI.get(map_name, map_name) + "  [1-4]", (14, 33), 13, CREAM)
 
-    if kare_a is None:
-        put_text(out, "Nasıl Kullanılır?", (16, 86), 17, MINT)
-        put_text(out, "1. Kalite listesindeki tüm noktalar yeşil olsun.", (16, 118), 14, CREAM)
-        put_text(out, "2. BOŞLUK tuşuna bas → Kare A (1. ışık) alınır.", (16, 144), 14, CREAM)
-        put_text(out, "3. Işığa yan dönüp tekrar BOŞLUK → Kare B alınır.", (16, 170), 14, CREAM)
-        put_text(out, "4. Cilt aynıyken ışığın Δa* ve ΔE etkisini gör!", (16, 196), 14, PEACH)
-        put_text(out, "1-4: Harita seç  |  r: Bölge maskesi  |  s: Kaydet", (16, 240), 13, MUTED)
+    footer_y = height - 28
+
+    # Henüz hiç çekim alınmadıysa büyük ve çok net 2 adımlı rehber
+    if cekim_1 is None:
+        kutu_y = 74
+        cv2.rectangle(out, (14, kutu_y), (width - 14, kutu_y + 210), PLUM_CARD, -1)
+        cv2.rectangle(out, (14, kutu_y), (width - 14, kutu_y + 210), MINT, 1)
+        put_text(out, "2 Adımda Işık Hilesini Gör:", (28, kutu_y + 16), 17, GOLD)
+        put_text(out, "ADIM 1:", (28, kutu_y + 54), 14, MINT)
+        put_text(out, "Normal dururken [BOŞLUK] tuşuna bas.", (104, kutu_y + 54), 14, CREAM)
+        put_text(out, "ADIM 2:", (28, kutu_y + 92), 14, PEACH)
+        put_text(out, "Telefon ışığı tut / yan dön, tekrar [BOŞLUK] bas.", (104, kutu_y + 92), 14, CREAM)
+        put_text(out, "SONUÇ:", (28, kutu_y + 132), 14, GOLD)
+        put_text(out, "Cildin aynı olduğu halde kameranın nasıl", (104, kutu_y + 132), 14, CREAM)
+        put_text(out, "farklı sayılar ürettiğini yan yana gör!", (104, kutu_y + 154), 14, CREAM)
+        put_text(out, "[r] Bölge maskesi  ·  [s] PNG kaydet  ·  [F] Yardım", (14, footer_y), 12, MUTED)
         return out
 
-    # Harita kutuları (A tek başınaysa büyük; A ve B varsa yan yana!)
+    # Dinamik görsel kutu yüksekliği (alt tabloya her zaman en az 185 px yer bırakır)
     y_top = 66
-    if kare_b is None:
-        if kare_a.metrics is not None:
-            hm = harita_kucuk(kare_a, map_name, width - 32, 220)
-            x0 = (width - hm.shape[1]) // 2
-            out[y_top:y_top + hm.shape[0], x0:x0 + hm.shape[1]] = hm
-            cv2.rectangle(out, (x0, y_top), (x0 + hm.shape[1], y_top + hm.shape[0]), MINT, 1)
-            put_text(out, "KARE A (Boşluk: Kare B ile karşılaştır)", (14, y_top + hm.shape[0] + 8), 13, MINT)
-            y_tbl = y_top + hm.shape[0] + 34
-        else:
-            put_text(out, "Kare A reddedildi: " + kare_a.quality.first_problem, (14, 80), 13, PEACH)
-            return out
+    avail_img_h = max(105, footer_y - y_top - 190)
+
+    if cekim_2 is None:
+        hm = harita_kucuk(cekim_1, map_name, width - 40, avail_img_h)
+        x0 = (width - hm.shape[1]) // 2
+        out[y_top:y_top + hm.shape[0], x0:x0 + hm.shape[1]] = hm
+        cv2.rectangle(out, (x0, y_top), (x0 + hm.shape[1], y_top + hm.shape[0]), MINT, 2)
+        y_tbl = y_top + hm.shape[0] + 12
+
+        cv2.rectangle(out, (14, y_tbl), (width - 14, footer_y - 10), PLUM_CARD, -1)
+        cv2.rectangle(out, (14, y_tbl), (width - 14, footer_y - 10), MINT, 1)
+        put_text(out, "1. ÇEKİM ALINDI! Şimdi 2. Adım:", (26, y_tbl + 12), 15, GOLD)
+        put_text(out, "Yüzüne telefon feneri tut veya pencereye dönüp", (26, y_tbl + 42), 13, CREAM)
+        put_text(out, "tekrar [BOŞLUK] tuşuna bas -> karşılaştırma açılır!", (26, y_tbl + 64), 13, MINT)
+        s1 = ozet_degerler(cekim_1)
+        put_text(
+            out,
+            f"1. Çekim -> Kızarıklık:{s1['kizarik']:+.1f}  Parlama:%{s1['parlama']:.1f}  Doku:{s1['doku']:.1f}",
+            (26, y_tbl + 100), 12, MUTED,
+        )
     else:
         slot_w = (width - 36) // 2
-        slot_h = 195
-        for idx, (lbl, rep, col) in enumerate([("KARE A", kare_a, MINT), ("KARE B", kare_b, PEACH)]):
+        slot_h = avail_img_h
+        for idx, (lbl, rep, col) in enumerate([("1. ÇEKİM (Önce)", cekim_1, MINT), ("2. ÇEKİM (Yeni Işık)", cekim_2, PEACH)]):
             sx = 12 + idx * (slot_w + 12)
             cv2.rectangle(out, (sx, y_top), (sx + slot_w, y_top + slot_h), PLUM_CARD, -1)
-            if rep.metrics is not None:
-                hm = harita_kucuk(rep, map_name, slot_w - 8, slot_h - 28)
-                ox = sx + (slot_w - hm.shape[1]) // 2
-                oy = y_top + 24
-                out[oy:oy + hm.shape[0], ox:ox + hm.shape[1]] = hm
-            put_text(out, lbl, (sx + 8, y_top + 4), 13, col)
+            hm = harita_kucuk(rep, map_name, slot_w - 8, max(70, slot_h - 26))
+            ox = sx + (slot_w - hm.shape[1]) // 2
+            oy = y_top + 23
+            out[oy:oy + hm.shape[0], ox:ox + hm.shape[1]] = hm
+            put_text(out, lbl, (sx + 8, y_top + 4), 12, col)
             cv2.rectangle(out, (sx, y_top), (sx + slot_w, y_top + slot_h), col, 1)
-        y_tbl = y_top + slot_h + 14
 
-    # Gösterge Tablosu
-    cv2.rectangle(out, (12, y_tbl), (width - 12, height - 38), PLUM_CARD, -1)
-    cv2.rectangle(out, (12, y_tbl), (width - 12, height - 38), (70, 35, 90), 1)
+        y_tbl = y_top + slot_h + 10
+        cv2.rectangle(out, (12, y_tbl), (width - 12, footer_y - 8), PLUM_CARD, -1)
+        cv2.rectangle(out, (12, y_tbl), (width - 12, footer_y - 8), (85, 50, 105), 1)
 
-    if kare_b is None and kare_a.metrics is not None:
-        put_text(out, "Bölge Özeti (Kare A)", (22, y_tbl + 8), 14, MINT)
-        yy = y_tbl + 34
-        for name, st in kare_a.metrics.regions.items():
-            put_text(
-                out,
-                f"{name:<10} Δa*:{st.delta_a:+5.1f}  Parlama:%{st.shine_percent:4.1f}  Doku:{st.texture:4.1f}",
-                (22, yy), 13, CREAM,
-            )
-            yy += 24
-        if kare_a.metrics.cheek_delta_e is not None:
-            put_text(out, f"İki yanak arası renk farkı (ΔE): {kare_a.metrics.cheek_delta_e:.1f}", (22, yy + 6), 13, GOLD)
-    elif kare_a.metrics is not None and kare_b.metrics is not None:
-        sa, sb = ozet_degerler(kare_a), ozet_degerler(kare_b)
-        put_text(out, "A / B IŞIK KARŞILAŞTIRMASI", (22, y_tbl + 8), 14, GOLD)
+        s1, s2 = ozet_degerler(cekim_1), ozet_degerler(cekim_2)
+        put_text(out, "KARŞILAŞTIRMA TABLOSU", (22, y_tbl + 7), 14, GOLD)
+        cols = [22, 218, 292, 372]
+        yy = y_tbl + 29
+        for cx, htxt in zip(cols, ["Ölçülen Özellik", "1.Çekim", "2.Çekim", "Değişim"]):
+            put_text(out, htxt, (cx, yy), 12, MUTED)
+
         satirlar = [
-            ("Ort. Δa* (kızarıklık)", f"{sa['delta_a']:+.1f}", f"{sb['delta_a']:+.1f}", f"{sb['delta_a'] - sa['delta_a']:+.1f}"),
-            ("Parlak piksel (%)", f"%{sa['shine']:.1f}", f"%{sb['shine']:.1f}", f"{sb['shine'] - sa['shine']:+.1f}"),
-            ("Doku değişimi", f"{sa['texture']:.1f}", f"{sb['texture']:.1f}", f"{sb['texture'] - sa['texture']:+.1f}"),
-            ("İki yanak ΔE", f"{sa['cheek_de']:.1f}", f"{sb['cheek_de']:.1f}", f"{sb['cheek_de'] - sa['cheek_de']:+.1f}"),
+            ("Kızarıklık tonu", f"{s1['kizarik']:+.1f}", f"{s2['kizarik']:+.1f}", f"{s2['kizarik'] - s1['kizarik']:+.1f}"),
+            ("Parlama oranı", f"%{s1['parlama']:.1f}", f"%{s2['parlama']:.1f}", f"{s2['parlama'] - s1['parlama']:+.1f}%"),
+            ("Cilt dokusu", f"{s1['doku']:.1f}", f"{s2['doku']:.1f}", f"{s2['doku'] - s1['doku']:+.1f}"),
+            ("Sağ-Sol yanak farkı", f"{s1['yanak_fark']:.1f}", f"{s2['yanak_fark']:.1f}", f"{s2['yanak_fark'] - s1['yanak_fark']:+.1f}"),
         ]
-        yy = y_tbl + 34
-        put_text(out, f"{'Gösterge':<21} {'A':>6} {'B':>6} {'Fark':>7}", (22, yy), 12, MUTED)
-        yy += 22
-        for ad, va, vb, vf in satirlar:
-            put_text(out, f"{ad:<21} {va:>6} {vb:>6} {vf:>7}", (22, yy), 13, CREAM)
-            yy += 23
-        put_text(out, "Cilt aynıyken ışık açısı ölçümleri değiştirir!", (22, yy + 6), 12, PEACH)
+        for ad, v1, v2, vf in satirlar:
+            yy += 21
+            if yy + 18 > footer_y - 24:
+                break
+            put_text(out, ad, (cols[0], yy), 12, CREAM)
+            put_text(out, v1, (cols[1], yy), 12, MINT)
+            put_text(out, v2, (cols[2], yy), 12, PEACH)
+            put_text(out, vf, (cols[3], yy), 12, GOLD)
 
-    put_text(out, "c: Sıfırla  |  s: Raporu PNG kaydet", (14, height - 26), 12, MUTED)
+        if yy + 22 < footer_y - 6:
+            put_text(out, "Sonuç: Cildin değişmedi, sadece ışık sayıları değiştirdi!", (22, footer_y - 28), 12, GOLD)
+
+    put_text(out, "[Boşluk] Yeni çekim  ·  [c] Sıfırla  ·  [s] PNG kaydet", (14, footer_y), 12, MUTED)
     return out
 
 
-def main():
-    args = build_parser("SEIS Akıllı Cilt Aynası & A/B Stüdyo").parse_args()
+def main() -> None:
+    args = build_parser("Işık Kamerayı Nasıl Yanıltır? - 1. ve 2. Çekim Deneyi").parse_args()
     prepare, fps = FramePreparer(config.PROCESS_WIDTH), FPSMeter()
     analyzer = SkinAnalyzer(use_segmenter=True)
-    print(analyzer.segmenter_note)
 
-    preview: SkinReport | None = None
-    kare_a: SkinReport | None = None
-    kare_b: SkinReport | None = None
+    cekim_1: SkinReport | None = None
+    cekim_2: SkinReport | None = None
     map_name = MAP_KEYS[0]
     show_regions = True
-    last_preview = 0.0
     bildirim = ""
     bildirim_bitis = 0.0
 
     with Camera(args.source, config.CAPTURE_WIDTH, config.CAPTURE_HEIGHT) as cam, \
             FaceTracker() as faces, \
             DisplayLoop(
-                "SEIS Akilli Cilt Aynasi - A/B Isik Studyosu",
+                "SEIS BONUS 4 - Isik Kamerayi Nasil Yaniltir?",
                 args,
-                help_title="Bonus 4 · SEIS Akıllı Cilt Aynası (A/B Işık Stüdyosu)",
-                help_lines=[
-                    "Amaç: Farklı ışık açılarının cilt görünümü ölçümlerini nasıl değiştirdiğini A/B kıyaslamak.",
-                    "• [Boşluk] İlk basışta Kare A, farklı ışık açısında ikinci basışta Kare B alır.",
-                    "• [1-4] Kızarıklık, parlama, doku ve ΔE ısı haritaları arasında geçiş yap.",
-                    "• [r] Canlı bölge maskesini aç/kapat  ·  [c] A/B sıfırla  ·  [s] Raporu PNG kaydet.",
-                ],
+                help_title="Bonus 4 · Işık Kamerayı Nasıl Yanıltır? (1. vs 2. Çekim)",
+                help_lines=HELP_LINES,
             ) as loop:
         while loop.running:
             raw = cam.read()
@@ -203,16 +250,10 @@ def main():
                 break
             frame = prepare(raw)
             result = faces.process(frame)
-            now = time.monotonic()
 
-            if now - last_preview >= 0.45:
-                preview = analyzer.analyze(frame.full_bgr, result.faces, frame.scale_to_full)
-                last_preview = now
-
-            canvas = Canvas(frame, width=700, mirror=not args.no_mirror)
-            if show_regions and preview is not None and preview.regions is not None and len(result.faces) == 1:
-                # Canlı bölge önizlemesi (sade poligon çizimi)
-                from skin.regions import build_region_masks
+            # 860px genişlik -> ~484px yükseklik: sağ panelde hiçbir satır kesilmez!
+            canvas = Canvas(frame, width=860, mirror=not args.no_mirror)
+            if show_regions and len(result.faces) == 1:
                 face = result.faces[0]
                 live_reg = build_region_masks(
                     canvas.image, canvas.pts(face.points), face.width_px * canvas.scale,
@@ -223,47 +264,53 @@ def main():
             img = canvas.image
             disclaimer(img)
 
-            if preview is not None:
-                draw_quality(img, preview.quality, 12, 36, width=360)
-            put_text(img, f"FPS {fps.tick():.0f}", (img.shape[1] - 88, 36), 14, MINT, bg=PLUM_DARK)
+            # Sol üstte sade adım göstergesi (yüzü kapatmaz!)
+            adim_metni = (
+                "ADIM 1: [BOŞLUK] bas -> 1. Çekimi al"
+                if cekim_1 is None else
+                ("ADIM 2: Işığı değiştirip [BOŞLUK] bas -> 2. Çekimi al"
+                 if cekim_2 is None else
+                 "TAMAMLANDI! Sağda 1. ve 2. çekim farkını incele")
+            )
+            put_text(img, adim_metni, (14, 38), 15, MINT, bg=PLUM_DARK)
+            put_text(img, f"FPS {fps.tick():.0f}", (img.shape[1] - 86, 38), 14, CREAM, bg=PLUM_DARK)
 
             if time.monotonic() < bildirim_bitis and bildirim:
-                put_text(img, bildirim, (16, img.shape[0] - 66), 16, GOLD, bg=PLUM_DARK)
+                put_text(img, bildirim, (14, img.shape[0] - 68), 15, GOLD, bg=PLUM_DARK)
 
-            ok_kalite = preview is not None and preview.quality.ok
-            hedef = "Kare A" if kare_a is None else ("Kare B" if kare_b is None else "Kare B'yi yenile")
-            hint = f"Kalite uygun! Boşluk → {hedef}" if ok_kalite else (
-                "Uygun görüntü bekleniyor. " + (preview.quality.first_problem if preview else "")
+            alt_ipucu = (
+                "[Boşluk] Fotoğraf Çek  ·  [1-4] Harita  ·  [r] Maske Aç/Kapa  ·  [c] Sıfırla  ·  [s] Kaydet"
+                if len(result.faces) == 1 else "Lütfen kameraya tek kişi olarak bakın."
             )
-            status_line(img, hint, "ok" if ok_kalite else "warn")
+            status_line(img, alt_ipucu, "ok" if len(result.faces) == 1 else "warn")
 
-            sag = studiyo_paneli_ciz(kare_a, kare_b, map_name, height=img.shape[0])
+            sag = sag_panel_ciz(cekim_1, cekim_2, map_name, height=img.shape[0], width=470)
             birlesik = np.hstack([img, sag])
             key = loop.show(birlesik)
 
             if key == ord(" "):
-                yeni = analyzer.analyze(frame.full_bgr, result.faces, frame.scale_to_full)
-                if yeni.metrics is None:
-                    bildirim = "Kalite yetersiz: " + yeni.quality.first_problem
-                elif kare_a is None:
-                    kare_a = yeni
-                    bildirim = f"Kare A alındı ({yeni.elapsed_ms:.0f} ms) — Şimdi ışığa dönüp Kare B al!"
+                yeni = esnek_cekim_al(analyzer, frame, result.faces)
+                if yeni is None:
+                    bildirim = "Yüz algılanamadı! Kameraya bakıp tekrar Boşluk bas."
+                elif cekim_1 is None:
+                    cekim_1 = yeni
+                    bildirim = "1. Çekim alındı! Şimdi telefon ışığı tutup tekrar Boşluk bas."
                 else:
-                    kare_b = yeni
-                    bildirim = f"Kare B alındı ({yeni.elapsed_ms:.0f} ms) — A/B farkı sağda!"
-                bildirim_bitis = time.monotonic() + 2.8
+                    cekim_2 = yeni
+                    bildirim = "2. Çekim alındı! Sağdaki değişim tablosuna bak!"
+                bildirim_bitis = time.monotonic() + 3.0
             elif ord("1") <= key <= ord("4"):
                 map_name = MAP_KEYS[key - ord("1")]
-            elif key == ord("r"):
+            elif key in (ord("r"), ord("R")):
                 show_regions = not show_regions
-            elif key == ord("c"):
-                kare_a = kare_b = None
-                bildirim = "A/B karşılaştırma temizlendi."
-                bildirim_bitis = time.monotonic() + 1.8
-            elif key == ord("s"):
-                dosya = f"seis_cilt_raporu_{int(time.time())}.png"
+            elif key in (ord("c"), ord("C")):
+                cekim_1 = cekim_2 = None
+                bildirim = "Sıfırlandı — 1. Çekim için tekrar Boşluk bas."
+                bildirim_bitis = time.monotonic() + 2.0
+            elif key in (ord("s"), ord("S")):
+                dosya = f"isik_deneyi_{int(time.time())}.png"
                 cv2.imwrite(dosya, birlesik)
-                bildirim = f"Kaydedildi: {dosya}"
+                bildirim = f"Rapor kaydedildi: {dosya}"
                 bildirim_bitis = time.monotonic() + 2.4
     analyzer.close()
 
