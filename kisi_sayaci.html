@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SEIS OpenCV Atölyesi — Canlı Sınıf Kişi Sayacı</title>
+  <style>
+    :root {
+      --bg: #18040e;
+      --card: rgba(46, 11, 28, 0.78);
+      --border: rgba(108, 232, 170, 0.38);
+      --cream: #f7ecda;
+      --mint: #6ce8aa;
+      --peach: #eba182;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at top, #380b20, var(--bg) 70%);
+      color: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      gap: 12px;
+    }
+    header {
+      width: min(720px, 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand img { width: 34px; height: 34px; border-radius: 50%; }
+    .brand strong { font-size: 0.95rem; display: block; }
+    .brand span { font-size: 0.72rem; color: var(--mint); }
+    .stats {
+      width: min(720px, 100%);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .stat {
+      padding: 11px;
+      border-radius: 14px;
+      background: var(--card);
+      border: 1px solid rgba(247,236,218,0.14);
+      text-align: center;
+    }
+    .stat strong { display: block; font-size: 1.7rem; color: var(--mint); font-family: monospace; }
+    .stat span { font-size: 0.74rem; color: #d9c5b4; }
+    .stage {
+      position: relative;
+      width: min(720px, 100%);
+      aspect-ratio: 16 / 10;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #0d0207;
+      border: 1.5px solid var(--border);
+    }
+    video, canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .controls {
+      width: min(720px, 100%);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    button {
+      padding: 11px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--mint);
+      color: #120209;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+    button.ghost {
+      background: rgba(247,236,218,0.08);
+      color: var(--cream);
+    }
+    .status {
+      font-size: 0.84rem;
+      color: var(--peach);
+      text-align: center;
+      max-width: 680px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="assets/seis-logo.png" alt="SEIS" />
+      <div><strong>Canlı Sınıf Kişi Sayacı</strong><span>SEIS · OpenCV Atölyesi Mobil &amp; Web Demo</span></div>
+    </div>
+    <a href="index.html" style="color:var(--mint); font-size:0.8rem; text-decoration:none; font-weight:700;">← Sunuma Dön</a>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><strong id="nowCount">0</strong><span>Anlık Kişi</span></div>
+    <div class="stat"><strong id="maxCount">0</strong><span>En Yüksek</span></div>
+    <div class="stat"><strong id="fpsVal">0</strong><span>FPS</span></div>
+  </div>
+
+  <div class="stage">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="startBtn">📷 Kamerayı Başlat</button>
+    <button id="flipBtn" class="ghost">🔄 Ön / Arka Kamera</button>
+    <button id="resetBtn" class="ghost">↺ Zirveyi Sıfırla</button>
+  </div>
+
+  <p class="status" id="status">1/3 · Yapay zekâ kütüphaneleri yükleniyor…</p>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+    const statusEl = document.getElementById('status');
+    const nowEl = document.getElementById('nowCount');
+    const maxEl = document.getElementById('maxCount');
+    const fpsEl = document.getElementById('fpsVal');
+
+    let model = null;
+    let stream = null;
+    let facingMode = 'user';
+    let maxPeople = 0;
+    let running = false;
+    let busy = false;
+    let lastT = performance.now();
+
+    function setStatus(msg, ok = false) {
+      statusEl.textContent = msg;
+      statusEl.style.color = ok ? '#6ce8aa' : '#eba182';
+    }
+
+    function loadScript(urls) {
+      return new Promise((resolve, reject) => {
+        let i = 0;
+        function next() {
+          if (i >= urls.length) return reject(new Error('CDN erişilemedi'));
+          const s = document.createElement('script');
+          s.src = urls[i++];
+          s.onload = () => resolve();
+          s.onerror = () => { s.remove(); next(); };
+          document.head.appendChild(s);
+        }
+        next();
+      });
+    }
+
+    async function initModel() {
+      try {
+        setStatus('1/3 · TensorFlow.js yükleniyor…');
+        await loadScript([
+          'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js',
+          'https://unpkg.com/@tensorflow/tfjs@4.17.0/dist/tf.min.js'
+        ]);
+        setStatus('2/3 · Kişi tespit modeli (COCO-SSD) yükleniyor…');
+        await loadScript([
+          'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js',
+          'https://unpkg.com/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js'
+        ]);
+        await tf.ready();
+        setStatus('3/3 · Model ağırlıkları indiriliyor (ilk açılışta ~5 sn)…');
+        model = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
+        setStatus(running
+          ? '✓ Canlı kişi sayımı aktif! (Görüntü cihazdan dışarı çıkmaz.)'
+          : '✓ Model hazır! "Kamerayı Başlat" düğmesine tıkla.', true);
+      } catch (err) {
+        setStatus('✕ Model yüklenemedi: ' + err.message + ' (İnternet bağlantısını kontrol edip yenile.)');
+      }
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus('✕ Bu tarayıcıda kamera API desteklenmiyor veya HTTPS gerekli.');
+        return;
+      }
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      try {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+          });
+        } catch (_) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+        video.srcObject = stream;
+        await video.play();
+        if (!running) {
+          running = true;
+          requestAnimationFrame(detectLoop);
+        }
+        setStatus(model
+          ? '✓ Canlı kişi sayımı aktif! (Görüntü cihazdan dışarı çıkmaz.)'
+          : '✓ Kamera açıldı! Model birkaç saniye içinde otomatik başlayacak…', true);
+      } catch (err) {
+        setStatus('✕ Kamera açılamadı: ' + err.message + ' (Tarayıcı kamera iznini verin.)');
+      }
+    }
+
+    async function detectLoop() {
+      if (!running) return;
+      if (model && !busy && video.readyState >= 2 && video.videoWidth > 0) {
+        busy = true;
+        try {
+          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+          }
+          const preds = await model.detect(video);
+          const people = preds.filter(p => p.class === 'person' && p.score >= 0.40);
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          people.forEach((p, idx) => {
+            const [x, y, w, h] = p.bbox;
+            ctx.strokeStyle = '#6ce8aa';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, w, h);
+            ctx.fillStyle = 'rgba(18, 2, 9, 0.85)';
+            ctx.fillRect(x, Math.max(0, y - 26), 118, 26);
+            ctx.fillStyle = '#6ce8aa';
+            ctx.font = 'bold 14px monospace';
+            ctx.fillText(`#${idx + 1} · %${Math.round(p.score * 100)}`, x + 7, Math.max(18, y - 8));
+          });
+
+          nowEl.textContent = people.length;
+          if (people.length > maxPeople) {
+            maxPeople = people.length;
+            maxEl.textContent = maxPeople;
+          }
+          const now = performance.now();
+          fpsEl.textContent = Math.round(1000 / Math.max(1, now - lastT));
+          lastT = now;
+        } catch (e) {
+          setStatus('Tespit hatası: ' + e.message);
+        } finally {
+          busy = false;
+        }
+      }
+      requestAnimationFrame(detectLoop);
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startCamera);
+    document.getElementById('flipBtn').addEventListener('click', () => {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      startCamera();
+    });
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      maxPeople = 0; maxEl.textContent = '0';
+    });
+
+    initModel();
+    startCamera();
+  </script>
+</body>
+</html>

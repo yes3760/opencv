@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SEIS OpenCV Atölyesi — Kahoot Katılımcı</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    :root { --bg:#16040d; --card:rgba(46,11,28,.84); --mint:#6ce8aa; --cream:#f7ecda; --gold:#f4c97a; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:radial-gradient(circle at top,#3c0b22,var(--bg) 72%); color:var(--cream); min-height:100vh; padding:18px; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+    .box { width:min(460px,100%); background:var(--card); border:1px solid rgba(108,232,170,.36); border-radius:22px; padding:22px; text-align:center; }
+    input { width:100%; padding:13px; border-radius:14px; border:1.5px solid var(--mint); background:#0f0208; color:var(--cream); font-size:1.05rem; text-align:center; margin:8px 0; }
+    .join-btn { width:100%; padding:14px; border-radius:999px; border:none; background:var(--mint); color:#120209; font-size:1.05rem; font-weight:800; cursor:pointer; margin-top:8px; }
+    .pad { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+    .ans-btn { height:130px; border-radius:18px; border:none; color:#fff; font-size:2.4rem; font-weight:900; cursor:pointer; box-shadow:0 10px 24px rgba(0,0,0,.4); }
+    .ans-btn:active { transform:scale(.95); }
+    .b0{background:#c83349} .b1{background:#1d6fa5} .b2{background:#c98a18} .b3{background:#238c5a}
+    .hidden { display:none!important; }
+  </style>
+</head>
+<body>
+<div class="box">
+  <div style="font-family:monospace;color:var(--mint);font-size:.82rem;font-weight:700;margin-bottom:6px">SEIS OPENCV ATÖLYESİ · CANLI KAHOOT</div>
+
+  <div id="joinView">
+    <h2 style="font-size:1.45rem;margin-bottom:6px">Yarışmaya Katıl!</h2>
+    <div style="margin:6px 0 12px; padding:9px 12px; border-radius:12px; background:rgba(244,201,122,.16); border:1px solid var(--gold); font-size:.85rem; color:#fff;">
+      🏆 <strong style="color:var(--gold);">Sadece 1. Olana:</strong> <strong>Sürpriz Büyük Ödül!</strong>
+    </div>
+    <p style="font-size:.84rem;color:#d9c5b4;margin-bottom:8px">İlk doğru cevaplayan en yüksek puanı alır!</p>
+    <input id="roomInp" placeholder="Oda Kodu (örn. SEIS-1234)" />
+    <input id="nameInp" placeholder="Adın / Takma Adın" maxlength="20" />
+    <button class="join-btn" id="joinBtn">🚀 Katıl</button>
+    <p id="joinErr" style="color:#ff8c85;font-size:.84rem;margin-top:10px"></p>
+  </div>
+
+  <div id="waitView" class="hidden">
+    <h2 id="helloName" style="color:var(--mint)"></h2>
+    <p id="waitMsg" style="margin-top:10px;color:#d9c5b4;font-size:1rem">Bağlanılıyor…</p>
+    <div id="myScoreBar" style="margin-top:16px;font-family:monospace;color:var(--gold);font-size:1.05rem;font-weight:700"></div>
+  </div>
+
+  <div id="padView" class="hidden">
+    <div style="display:flex;justify-content:space-between;font-family:monospace;color:var(--gold);font-weight:700">
+      <span id="pQNum">SORU 1</span><span id="pTime">20 sn</span>
+    </div>
+    <p style="font-size:.86rem;color:#d9c5b4;margin-top:4px">Soruyu projeksiyondan oku ve hızlıca tıkla!</p>
+    <div class="pad">
+      <button class="ans-btn b0" onclick="sendAns(0)">A</button>
+      <button class="ans-btn b1" onclick="sendAns(1)">B</button>
+      <button class="ans-btn b2" onclick="sendAns(2)">C</button>
+      <button class="ans-btn b3" onclick="sendAns(3)">D</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+if (params.get('oda')) document.getElementById('roomInp').value = params.get('oda');
+
+let peer = null, conn = null, currentQ = -1, sentForQ = -1;
+
+function join() {
+  const room = document.getElementById('roomInp').value.trim().toUpperCase();
+  const name = document.getElementById('nameInp').value.trim();
+  const err = document.getElementById('joinErr');
+  if (!room || !name) { err.textContent = 'Oda kodu ve adını yaz!'; return; }
+  err.textContent = 'Odaya bağlanılıyor…';
+
+  peer = new Peer();
+  peer.on('open', () => {
+    conn = peer.connect(room, { reliable: true });
+    conn.on('open', () => {
+      conn.send({ type: 'join', name });
+      document.getElementById('joinView').classList.add('hidden');
+      document.getElementById('waitView').classList.remove('hidden');
+      document.getElementById('helloName').textContent = 'Hoş geldin, ' + name + '!';
+      document.getElementById('waitMsg').textContent = 'Lobidesin! Eğitmen yarışmayı başlatınca A/B/C/D butonları açılacak.';
+    });
+    conn.on('data', msg => { if (msg.type === 'state') updateState(msg); });
+    conn.on('close', () => { document.getElementById('waitMsg').textContent = 'Oda bağlantısı kapandı.'; });
+  });
+  peer.on('error', e => { err.textContent = 'Bağlanılamadı (' + e.type + '). Oda kodunu kontrol et.'; });
+}
+
+function sendAns(choice) {
+  if (!conn || !conn.open) return;
+  sentForQ = currentQ;
+  conn.send({ type: 'answer', choice });
+  document.getElementById('padView').classList.add('hidden');
+  document.getElementById('waitView').classList.remove('hidden');
+  document.getElementById('waitMsg').textContent = '✓ Cevabın alındı! Süre bitince puanın burada görünecek…';
+}
+
+function updateState(s) {
+  currentQ = s.qIdx;
+  document.getElementById('myScoreBar').textContent = `Puanın: ${s.score}  ·  Sıralama: #${s.rank}`;
+
+  if (s.phase === 'question' && !s.answered && sentForQ !== s.qIdx) {
+    document.getElementById('waitView').classList.add('hidden');
+    document.getElementById('padView').classList.remove('hidden');
+    document.getElementById('pQNum').textContent = `SORU ${s.qIdx + 1} / ${s.total}`;
+    document.getElementById('pTime').textContent = `${Math.ceil(s.remaining)} sn`;
+  } else {
+    document.getElementById('padView').classList.add('hidden');
+    document.getElementById('waitView').classList.remove('hidden');
+    const msg = document.getElementById('waitMsg');
+    if (s.phase === 'lobby') msg.innerHTML = 'Lobidesin! Eğitmen başlatınca butonlar açılacak.<br/><span style="color:#f4c97a;font-size:.88rem;font-weight:700">🏆 Sadece 1. olan şampiyona Sürpriz Büyük Ödül verilecek!</span>';
+    else if (s.phase === 'question') msg.textContent = '✓ Cevabın alındı! Diğer katılımcılar bekleniyor…';
+    else if (s.phase === 'reveal') {
+      if (s.lastResult) {
+        msg.innerHTML = s.lastResult.correct
+          ? `<strong style="color:#6ce8aa;font-size:1.3rem">✓ DOĞRU! +${s.lastResult.points} puan</strong>`
+          : `<strong style="color:#ff8a80;font-size:1.3rem">✕ YANLIŞ (+0 puan)</strong>`;
+      } else msg.textContent = '⏱ Süre doldu, cevap vermedin (+0 puan).';
+    } else if (s.phase === 'podium') {
+      msg.innerHTML = s.rank === 1
+        ? `<strong style="color:#f4c97a;font-size:1.32rem">👑 ŞAMPİYON OLDUN (#1)!<br/>🎟️ Büyük Ödül: TEKNİK GEZİ Kazandın!</strong>`
+        : `<strong style="color:#f4c97a;font-size:1.25rem">🏁 Yarışma Bitti! Sıralaman: #${s.rank}</strong>`;
+    }
+  }
+}
+
+document.getElementById('joinBtn').onclick = join;
+document.getElementById('nameInp').onkeydown = e => { if (e.key === 'Enter') join(); };
+</script>
+</body>
+</html>

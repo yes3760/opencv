@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEIS IT Workshop — OpenCV Atölyesi | Sunum &amp; Adım Adım Rehber</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <canvas id="meshCanvas"></canvas>
+
+  <!-- Minimal Floating Top Bar (No cluttered menu!) -->
+  <header class="topbar">
+    <div class="brand" id="brandHome" title="İlk slayta dön">
+      <img src="assets/seis-logo.png" alt="SEIS Logo" />
+      <div class="brand-txt">
+        <strong>OpenCV ATÖLYESİ</strong>
+        <span>SEIS · IT WORKSHOP</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="gridBtn" title="Tüm slaytlar arasında tek tıkla atla (G)">🗺 Slaytlar</button>
+      <button class="icon-btn" id="timerBtn" title="Atölye / Mola geri sayım sayacı (T)">⏱ Sayaç</button>
+      <button class="icon-btn" id="laserBtn" title="Sahnede lazer işaretçi aç/kapat (L)">🔴 Lazer</button>
+      <button class="icon-btn" id="glossaryBtn" title="Tüm teknik terimlerin sade Türkçe açıklamaları">📖 Sözlük</button>
+      <button class="icon-btn" id="fsBtn" title="Tam ekran (F)">⛶ Tam Ekran</button>
+    </div>
+  </header>
+
+  <!-- 21-Slide Linear Keynote Deck (Zero sub-tabs, zero vertical scrolling) -->
+  <main class="deck">
+
+    <!-- 01 · KAPAK -->
+    <section class="slide active">
+      <div class="slide-inner">
+        <div class="grid-2-wide">
+          <div>
+            <div class="hero-badge"><span class="pulse"></span> SEIS IT WORKSHOP · CANLI &amp; UYGULAMALI</div>
+            <h1 class="hero-h1">OpenCV<br /><span class="grad">ATÖLYESİ</span></h1>
+            <p class="hero-sub">Python ile Bilgisayarlı Görü: Pikselden Gerçek Zamanlı Yüz ve El Etkileşimine</p>
+            <div class="meta-row">
+              <div class="meta-chip">📅 <strong>27 Kasım Cuma</strong></div>
+              <div class="meta-chip">⏰ <strong>16:00 – 20:00</strong></div>
+              <div class="meta-chip">📍 BBF · <strong>1108 Numaralı Sınıf</strong></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn-primary" onclick="goToSlide(1)">Sunuma Başla →</button>
+              <button class="btn-ghost" onclick="goToSlide(36)">🏆 Yarışmaya Git</button>
+            </div>
+            <p style="margin-top:14px; font-size:0.78rem; color:var(--cream-muted); font-family:'JetBrains Mono',monospace;">
+              Kontroller: ← / → slayt · G harita · T sayaç · L lazer · F tam ekran
+            </p>
+          </div>
+          <div class="poster-wrap">
+            <div class="poster-frame" id="posterFrame">
+              <span class="vf vf-tl"></span><span class="vf vf-tr"></span>
+              <span class="vf vf-bl"></span><span class="vf vf-br"></span>
+              <img src="assets/poster.png" alt="SEIS OpenCV Atölyesi Afişi" />
+              <div class="hud-chip">CV2::FACE_MESH · 478 PTS · 30 FPS</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 · OPENCV NEDIR -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">02 / 37 · TEMEL KAVRAM</div>
+        <h2 class="slide-title">OpenCV Nedir? Bilgisayara "Görmeyi" Öğretmek</h2>
+        <p class="slide-lead">
+          İnsan gözü bir ortama baktığında yüzleri, nesneleri ve hareketi anında anlar; bilgisayar içinse kamera görüntüsü yalnızca milyonlarca sayıdan oluşur. <strong>OpenCV</strong>, bu sayıları işleyip anlamlı bilgiye dönüştüren — yani <strong>bilgisayara görme yeteneği kazandıran</strong> — açık kaynaklı bilgisayarlı görü kütüphanesidir.
+        </p>
+        <div class="grid-4" style="margin-bottom:16px;">
+          <div class="stat-box"><div class="stat-val" style="font-size:1.35rem;">📷 Okur</div><div class="stat-lbl">Kamera, video ve fotoğrafı canlı sayı matrisine çevirir</div></div>
+          <div class="stat-box"><div class="stat-val" style="font-size:1.35rem;">✨ Temizler</div><div class="stat-lbl">Işık, renk, bulanıklık, kenar ve perspektifi düzenler</div></div>
+          <div class="stat-box"><div class="stat-val" style="font-size:1.35rem;">🎯 Anlar</div><div class="stat-lbl">Nesne, yüz, el, şekil ve hareketi gerçek zamanlı yakalar</div></div>
+          <div class="stat-box"><div class="stat-val" style="font-size:1.35rem;">⚡ Hızlıdır</div><div class="stat-lbl">Python kolaylığı + arka planda 60 FPS C++ çekirdeği</div></div>
+        </div>
+        <div class="grid-3">
+          <div class="card card-mint">
+            <span class="tag-mini">1. OpenCV (Göz &amp; Araç Kutusu)</span>
+            <h3 style="font-size:1.05rem; margin:8px 0 6px;">Görüntüyü Hazırlar &amp; Çizer</h3>
+            <p style="font-size:0.85rem; color:var(--cream-soft);">Kamerayı açar, görüntüyü aynalar, boyutlandırır, renk uzayını çevirir (BGR→RGB/HSV/LAB), filtre uygular ve bulduğu sonuçları ekrana çizer.</p>
+          </div>
+          <div class="card">
+            <span class="tag-mini tag-peach">2. MediaPipe (Yapay Zekâ)</span>
+            <h3 style="font-size:1.05rem; margin:8px 0 6px;">Karmaşık Örüntüleri Tanır</h3>
+            <p style="font-size:0.85rem; color:var(--cream-soft);">OpenCV'nin hazırladığı karede 478 yüz noktası, 21 el eklem noktası ve saç/cilt segmentasyonunu harici ekran kartı gerekmeden CPU'da çıkarır.</p>
+          </div>
+          <div class="card">
+            <span class="tag-mini">3. NumPy (Matematik Motoru)</span>
+            <h3 style="font-size:1.05rem; margin:8px 0 6px;">Sayıları Anında İşler</h3>
+            <p style="font-size:0.85rem; color:var(--cream-soft);">Her kamera karesini <code>(yükseklik, genişlik, 3)</code> boyutunda 0–255 arası sayılar olarak tutar; kırpma (ROI) ve anlık ölçüm hızı buradan gelir.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 · PIKSEL MATRISI & BGR TUZAGI -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">03 / 37 · BİLGİSAYAR NASIL GÖRÜR?</div>
+        <h2 class="slide-title">İnteraktif Piksel Matrisi &amp; BGR Tuzağı</h2>
+        <p class="slide-lead">Bilgisayar bir gözü fotoğraf olarak değil, 0–255 arası sayılardan oluşan bir 3B matris olarak görür. Fareni aşağıdaki karelerin üzerinde gezdir!</p>
+        <div class="grid-2-wide">
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="font-family:'Syne',sans-serif; font-size:1.05rem;">12×12 Göz Piksel Matrisi</h3>
+              <span class="tag-mini">Fareyle Üzerinde Gez</span>
+            </div>
+            <div class="px-grid" id="pxGrid" style="max-width:360px; margin:10px auto;"></div>
+            <div class="px-info" id="pxInfo">Bir pikselin üzerine gel → <code>frame[y, x]</code> BGR değerini gör!</div>
+          </div>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.1rem; margin-bottom:10px;">Unutulmaması Gereken 3 Altın Kural</h3>
+            <ul class="bullet-list">
+              <li><span class="tag-mini">1. Kural</span><strong>Önce Satır (y), Sonra Sütun (x):</strong> <code>frame[y, x]</code> yazılır. <code>frame.shape</code> çıktısı <code>(yükseklik, genişlik, 3)</code> döner.</li>
+              <li><span class="tag-mini tag-peach">2. Kural</span><strong>BGR vs RGB Tuzağı:</strong> OpenCV renkleri Mavi-Yeşil-Kırmızı okur. MediaPipe'a verirken mutlaka <code>cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)</code> yapmalısın!</li>
+              <li><span class="tag-mini">3. Kural</span><strong>30 FPS Bütçesi:</strong> Saniyede 30 kare göstermek için her karenin tüm işleme süresi yaklaşık <strong>33 milisaniyenin</strong> altında kalmalıdır.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 · CANLI FILTRE LAB -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">04 / 37 · ARAÇLAR &amp; CANLI DENEY</div>
+        <h2 class="slide-title">Canlı Görüntü İşleme Laboratuvarı</h2>
+        <p class="slide-lead">Gerçek piksel matematiğiyle çalışan filtreleri dene, sürgüyü kaydır ve karşılık gelen Python kodunu anında gör.</p>
+        <div class="grid-2-code">
+          <div class="card">
+            <div class="tabs" id="labTabs">
+              <button class="tab-btn active" data-mode="original">Orijinal</button>
+              <button class="tab-btn" data-mode="gray">Gri Ton</button>
+              <button class="tab-btn" data-mode="blur">Gaussian Blur</button>
+              <button class="tab-btn" data-mode="canny">Kenar (Canny)</button>
+              <button class="tab-btn" data-mode="otsu">Eşik (Binary)</button>
+              <button class="tab-btn" data-mode="mesh">Landmark Ağı</button>
+              <button class="tab-btn" id="labCamBtn" style="margin-left:auto; border-color:var(--border-mint); color:var(--mint);">📷 Canlı Kameram</button>
+            </div>
+            <div class="lab-canvas-wrap">
+              <canvas id="labCanvas"></canvas>
+              <div class="lab-badge" id="labBadge">CV2::ORIGINAL</div>
+            </div>
+            <div class="slider-row">
+              <span id="labSliderLabel">Parametre:</span>
+              <input type="range" id="labSlider" min="15" max="220" value="95" />
+              <strong id="labSliderVal" style="color:var(--mint); min-width:30px;">95</strong>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="code-card">
+              <div class="code-head">
+                <div class="dots-mac"><span></span><span></span><span></span></div>
+                <span>canli_filtre.py</span>
+                <button class="copy-btn" data-copy="#labCode">Kopyala</button>
+              </div>
+              <pre class="code-pre" id="labCode"></pre>
+            </div>
+            <div class="grid-2" style="gap:10px;">
+              <div class="card" style="padding:12px;"><span class="tag-mini">core &amp; imgproc</span><p style="font-size:0.78rem; color:var(--cream-soft); margin-top:4px;">Renk dönüşümü, bulanıklaştırma, Otsu eşik, morfoloji ve kontur.</p></div>
+              <div class="card" style="padding:12px;"><span class="tag-mini">videoio &amp; highgui</span><p style="font-size:0.78rem; color:var(--cream-soft); margin-top:4px;"><code>VideoCapture</code> ile kamera okuma, pencere ve sürgü kontrolü.</p></div>
+              <div class="card" style="padding:12px;"><span class="tag-mini">objdetect &amp; dnn</span><p style="font-size:0.78rem; color:var(--cream-soft); margin-top:4px;">Haar Cascade, QR okuyucu, YOLO ve ONNX derin öğrenme.</p></div>
+              <div class="card" style="padding:12px;"><span class="tag-mini">calib3d &amp; features2d</span><p style="font-size:0.78rem; color:var(--cream-soft); margin-top:4px;">Kamera kalibrasyonu, perspektif düzeltme, ORB/SIFT eşleştirme.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 · DUNYA DEVLERI (RESMI SIRKET LOGOLARI + KULLANIM AMACLARI) -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">05 / 37 · GERÇEK DÜNYA &amp; ENDÜSTRİ</div>
+        <h2 class="slide-title">Hangi Şirketler OpenCV'yi Ne Amaçla Kullanıyor?</h2>
+        <p class="slide-lead">OpenCV'yi kuran teknoloji devlerinden otonom araçlara, sosyal medya filtrelerinden stadyum kameralarına kadar gerçek kullanım alanları:</p>
+
+        <div class="grid-3" style="gap:12px;">
+          <div class="card company-card">
+            <div class="company-head">
+              <div class="company-logo-box"><img src="assets/logos/intel.svg" alt="Intel Logo" /></div>
+              <div>
+                <span class="tag-mini">KURUCU (1999) · ENDÜSTRİ 4.0</span>
+                <h3>Intel</h3>
+              </div>
+            </div>
+            <p>OpenCV'yi dünyaya kazandıran şirket. Fabrika bantlarında <strong>mikro-çip hata tespiti</strong>, RealSense 3D derinlik kameraları ve OpenVINO uç yapay zekâda kullanır.</p>
+          </div>
+
+          <div class="card company-card">
+            <div class="company-head">
+              <div class="company-logo-box"><img src="assets/logos/tesla.svg" alt="Tesla Logo" /></div>
+              <div>
+                <span class="tag-mini">OTONOM SÜRÜŞ &amp; KALİBRASYON</span>
+                <h3>Tesla &amp; Otomotiv</h3>
+              </div>
+            </div>
+            <p>Araç çevresindeki 8 kameranın <strong>lens kalibrasyonu</strong>, 360° kuş bakışı park görüntüsü, şerit takibi ve derin öğrenme öncesi görüntü hazırlığında kullanılır.</p>
+          </div>
+
+          <div class="card company-card">
+            <div class="company-head">
+              <div class="company-logo-box"><img src="assets/logos/google.svg" alt="Google Logo" /></div>
+              <div>
+                <span class="tag-mini">LENS · STREET VIEW · MEDIAPIPE</span>
+                <h3>Google</h3>
+              </div>
+            </div>
+            <p><strong>Google Lens</strong> belge/QR tarama, Street View 360° fotoğraf birleştirme ve bugün atölyede kullanacağımız <strong>MediaPipe</strong> yüz/el modelleriyle birlikte çalışır.</p>
+          </div>
+
+          <div class="card company-card">
+            <div class="company-head">
+              <div class="company-logo-box"><img src="assets/logos/meta.svg" alt="Meta Logo" /></div>
+              <div>
+                <span class="tag-mini">AR FİLTRELER &amp; VR EL TAKİBİ</span>
+                <h3>Meta (Instagram &amp; Quest)</h3>
+              </div>
+            </div>
+            <p>Instagram/WhatsApp <strong>canlı yüz AR efektleri</strong>, görüntülü görüşmede arka plan bulanıklaştırma ve Quest VR gözlüklerinde temassız el/oda takibinde kullanılır.</p>
+          </div>
+
+          <div class="card company-card">
+            <div class="company-head">
+              <div class="company-logo-box"><img src="assets/logos/nvidia.svg" alt="NVIDIA Logo" /></div>
+              <div>
+                <span class="tag-mini">ROBOTİK · MEDİKAL · GPU</span>
+                <h3>NVIDIA</h3>
+              </div>
+            </div>
+            <p><code>cv2.cuda</code> ile ekran kartında <strong>saniyede yüzlerce kare</strong> video analizi, otonom depo/fabrika robotları (Isaac) ve MR/BT medikal görüntü iyileştirmede kullanılır.</p>
+          </div>
+
+          <div class="card company-card">
+            <div class="company-head">
+              <div class="company-logo-box"><img src="assets/logos/sony.svg" alt="Sony Logo" /></div>
+              <div>
+                <span class="tag-mini">HAWK-EYE VAR &amp; SENSÖRLER</span>
+                <h3>Sony (Hawk-Eye &amp; PS VR)</h3>
+              </div>
+            </div>
+            <p>Futbol (VAR) ve teniste yüksek hızlı kameralarla <strong>milimetrik top yörüngesi / çizgi teknolojisi</strong>, kamera sensör odaklama ve görsel nesne takibinde kullanılır.</p>
+          </div>
+        </div>
+
+        <div class="eco-strip">
+          <span class="eco-label">Ayrıca her gün cebimizde &amp; sahada:</span>
+          <div class="eco-chip"><img src="assets/logos/apple.svg" alt="Apple" /><span><strong>Apple</strong> · Belge Tarama &amp; Portre</span></div>
+          <div class="eco-chip"><img src="assets/logos/pytorch.svg" alt="PyTorch" /><span><strong>PyTorch / YOLO</strong> · Veri Ön İşleme</span></div>
+          <div class="eco-chip"><img src="assets/logos/raspberrypi.svg" alt="Raspberry Pi" /><span><strong>İHA &amp; Gömülü</strong> · Drone Engel Kaçınma</span></div>
+          <div class="eco-chip"><img src="assets/logos/opencv.svg" alt="OpenCV" /><span><strong>2.500+ Algoritma</strong> · Açık Kaynak</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 · 4 SAATLIK PROGRAM -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">06 / 37 · 27 KASIM CUMA · 16:00 – 20:00</div>
+        <h2 class="slide-title">4 Saatlik Atölye Yol Haritası</h2>
+        <p class="slide-lead">3 ana proje + 7 bonus uygulama (AR, Enerji Ölçer, Oyunlar) + 12 soruluk ödüllü OpenCV bilgi yarışması:</p>
+        <div class="grid-2">
+          <div class="tl-list">
+            <div class="tl-row"><span class="tl-time">16:00 – 16:30</span><span><strong>Açılış &amp; Canlı Lab</strong> · Piksel, BGR, Canlı Kamera</span><span class="tl-dur">30 dk</span></div>
+            <div class="tl-row"><span class="tl-time">16:30 – 17:00</span><span><strong>Kurulum &amp; IDE</strong> · Python 3.12, <code>.venv</code>, modeller</span><span class="tl-dur">30 dk</span></div>
+            <div class="tl-row"><span class="tl-time">17:00 – 17:35</span><span><strong>OpenCV Temelleri</strong> · <code>01</code>, <code>02</code>, <code>03</code> kodları</span><span class="tl-dur">35 dk</span></div>
+            <div class="tl-row mola"><span class="tl-time">17:35 – 17:45</span><span><strong>☕ Çay Molası</strong> · Dinlenme &amp; kurulum desteği</span><span class="tl-dur">10 dk</span></div>
+            <div class="tl-row highlight"><span class="tl-time">17:45 – 18:20</span><span><strong>PROJE 1: Yüz &amp; Göz Kırpma</strong> · <code>04</code>, <code>05</code>, <code>06</code></span><span class="tl-dur">35 dk</span></div>
+          </div>
+          <div class="tl-list">
+            <div class="tl-row highlight"><span class="tl-time">18:20 – 18:52</span><span><strong>PROJE 2: Neon Hava Çizimi &amp; El Jestleri</strong> · <code>07</code>, <code>08</code></span><span class="tl-dur">32 dk</span></div>
+            <div class="tl-row highlight"><span class="tl-time">18:52 – 19:20</span><span><strong>PROJE 3: Cilt Görünümü &amp; Mimari</strong> · <code>09</code>, <code>10</code></span><span class="tl-dur">28 dk</span></div>
+            <div class="tl-row"><span class="tl-time">19:20 – 19:40</span><span><strong>Vitrin &amp; 7 Bonus Şov</strong> · AR, Enerji, Flappy, TKM</span><span class="tl-dur">20 dk</span></div>
+            <div class="tl-row highlight"><span class="tl-time">19:40 – 20:00</span><span><strong>🏆 Ödüllü Bilgi Yarışması</strong> · 12 Soru &amp; Kapanış</span><span class="tl-dur">20 dk</span></div>
+            <div class="card card-mint" style="padding:10px 14px; font-size:0.8rem;">
+              <strong>Gizlilik Notu:</strong> Kamera gönüllüdür; görüntü kaydedilmez. Kamerasız katılım için <code>--source video.mp4</code> çalışır.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 · KURULUM 1: PYTHON 3.12 -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">07 / 37 · KURULUM ADIM 1 / 4</div>
+        <h2 class="slide-title">Python 3.12 Kurulumu &amp; PATH Ayarı</h2>
+        <div class="grid-2-wide" style="align-items:start;">
+          <figure class="guide-fig">
+            <img src="assets/guide-python-install.svg" alt="Python 3.12 Kurulum Adımları — Add python.exe to PATH" />
+            <figcaption class="guide-fig-cap"><span>Python 3.12 Kurulum Penceresi</span><span>🔍 Büyüt</span></figcaption>
+          </figure>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.1rem; margin-bottom:10px;">Adım Adım Python Kurulumu</h3>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+              <a href="https://www.python.org/downloads/" target="_blank" rel="noopener" class="btn-primary" style="text-decoration:none; padding:8px 15px; font-size:0.82rem;">⬇ Python 3.12 İndir (python.org)</a>
+              <a href="https://code.visualstudio.com/" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none; padding:8px 14px; font-size:0.82rem;">💻 VS Code İndir</a>
+            </div>
+            <ul class="bullet-list" style="margin-bottom:12px;">
+              <li><span class="tag-mini">1</span>Yukarıdaki linkten <strong>Python 3.12</strong> sürümünü indir (MediaPipe 3.12 ile sorunsuz çalışır).</li>
+              <li><span class="tag-mini tag-peach">2</span>Windows kurulumunda alttaki <strong>"Add python.exe to PATH"</strong> kutusunu <strong>MUTLAKA işaretle</strong>, sonra <em>Install Now</em> de.</li>
+              <li><span class="tag-mini">3</span>Kurulum bitince aşağıdaki doğrulama komutunu kopyalayıp terminalde çalıştır:</li>
+            </ul>
+            <div class="cmd-block" style="margin-bottom:8px;">
+              <code>python3.12 --version</code>
+              <button class="copy-btn" data-copy="python3.12 --version">📋 macOS Kopyala</button>
+            </div>
+            <div class="cmd-block" style="margin-bottom:0; border-color:rgba(235,161,130,0.45); color:var(--peach);">
+              <code>py -3.12 --version</code>
+              <button class="copy-btn" data-copy="py -3.12 --version">📋 Windows Kopyala</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08 · KURULUM 2: TEK TIKLA INDIR + VENV + OPENCV + MODELLER -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">08 / 37 · KURULUM ADIM 2 / 4</div>
+        <h2 class="slide-title">Tek Tıkla İndir, Sanal Ortam (.venv) &amp; Modelleri Kur</h2>
+        <p class="slide-lead">Git kurmana bile gerek yok! Bilgisayarına uygun <strong>tek kutuyu kopyalayıp</strong> terminale yapıştır ve <code>Enter</code> bas — projeyi indirir, <code>.venv</code> kurar ve kamerayı test eder:</p>
+        <div class="grid-2">
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>macOS (Terminal — Tek Tık Kurulum)</span>
+              <button class="copy-btn" data-copy="#cmdMac">📋 Kopyala</button>
+            </div>
+            <pre class="code-pre" id="cmdMac" style="font-size:0.72rem;">python3.12 -c "import os,urllib.request,zipfile; d=os.path.expanduser('~/seis-opencv'); os.makedirs(d,exist_ok=True); urllib.request.urlretrieve('https://github.com/yes3760/opencv/archive/refs/heads/main.zip',d+'/m.zip'); zipfile.ZipFile(d+'/m.zip').extractall(d)"
+cd ~/seis-opencv/opencv-main/atolye-baslangic
+python3.12 -m venv .venv
+<span class="kw">source</span> .venv/bin/activate
+pip install -r requirements.txt
+python scripts/download_models.py
+python scripts/check_setup.py --kamera</pre>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>Windows 10 / 11 (CMD &amp; PowerShell — Tek Tık Kurulum!)</span>
+              <button class="copy-btn" data-copy="#cmdWin">📋 Kopyala</button>
+            </div>
+            <pre class="code-pre" id="cmdWin" style="font-size:0.72rem;">py -3.12 -c "import os,urllib.request,zipfile; os.makedirs('C:/seis-opencv',exist_ok=True); urllib.request.urlretrieve('https://github.com/yes3760/opencv/archive/refs/heads/main.zip','C:/seis-opencv/m.zip'); zipfile.ZipFile('C:/seis-opencv/m.zip').extractall('C:/seis-opencv')"
+pushd C:\seis-opencv\opencv-main\atolye-baslangic
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe scripts\download_models.py
+.venv\Scripts\python.exe scripts\check_setup.py --kamera</pre>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px; padding:11px 16px; font-size:0.81rem; color:var(--cream-soft); display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+          <span><strong style="color:var(--mint);">Notlar:</strong> Windows'ta <code>C:\seis-opencv\opencv-main\atolye-baslangic</code> klasörüne kurar (OneDrive ve Türkçe karakter hatasını önler). <code>py -3.12</code> tanınmazsa yerine <code>python</code> yazın. <strong>Intel Mac:</strong> <code>requirements-intel-mac.txt</code>.</span>
+          <a href="https://github.com/yes3760/opencv/archive/refs/heads/main.zip" class="dl-btn" style="text-decoration:none; white-space:nowrap;">⬇ Manuel ZIP</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 09 · KURULUM 3: VS CODE -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">09 / 37 · KURULUM ADIM 3 / 4</div>
+        <h2 class="slide-title">VS Code'da Projeyi Açma &amp; Çalıştırma</h2>
+        <div class="grid-2-wide" style="align-items:start;">
+          <figure class="guide-fig">
+            <img src="assets/guide-vscode-setup.svg" alt="VS Code'da vision-workshop Klasörünü Açma ve Çalıştırma" />
+            <figcaption class="guide-fig-cap"><span>VS Code Çalışma Alanı (1–4 Adımlar)</span><span>🔍 Büyüt</span></figcaption>
+          </figure>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.1rem; margin-bottom:10px;">4 Adımda VS Code Hazırlığı</h3>
+            <ul class="bullet-list">
+              <li><span class="tag-mini">1</span><strong>Terminalden Direkt VS Code'da Aç:</strong> Klasörün içindeyken aşağıdaki komutu yapıştır — proje ve <code>01_kamera.py</code> doğrudan açılır!</li>
+            </ul>
+            <div class="cmd-block" style="margin-top:8px; margin-bottom:6px; border-color:rgba(108,232,170,0.5);">
+              <code>open -a "Visual Studio Code" . examples/01_kamera.py</code>
+              <button class="copy-btn" data-copy='open -a "Visual Studio Code" . examples/01_kamera.py'>📋 VS Code (Mac)</button>
+            </div>
+            <div class="cmd-block" style="margin-bottom:6px; border-color:rgba(124,196,250,0.5); color:var(--sky);">
+              <code>open -a "Antigravity IDE" . examples/01_kamera.py</code>
+              <button class="copy-btn" data-copy='open -a "Antigravity IDE" . examples/01_kamera.py'>📋 Antigravity IDE</button>
+            </div>
+            <div class="cmd-block" style="margin-bottom:10px; border-color:rgba(235,161,130,0.5); color:var(--peach);">
+              <code>code . examples/01_kamera.py</code>
+              <button class="copy-btn" data-copy="code . examples/01_kamera.py">📋 Windows</button>
+            </div>
+            <ul class="bullet-list">
+              <li><span class="tag-mini tag-peach">2</span><strong>▶ Run Butonu:</strong> Microsoft <em>Python</em> eklentisi kuruluysa sağ üstten tek tıkla çalıştırabilirsin.</li>
+              <li><span class="tag-mini">3</span><strong>.venv Seçimi:</strong> Sağ alt köşede <code>Python 3.12 (.venv)</code> yazmalı. Değilse tıklayıp <code>.venv</code> seç!</li>
+              <li><span class="tag-mini tag-peach">4</span><strong>Terminal:</strong> <code>Ctrl + `</code> ile aç, satır başında <code>(.venv)</code> görüyorsan aşağıdaki komutu yapıştır:</li>
+            </ul>
+            <div class="cmd-block" style="margin-top:8px; margin-bottom:0;">
+              <code>python examples/01_kamera.py</code>
+              <button class="copy-btn" data-copy="python examples/01_kamera.py">📋 Kopyala</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 · KURULUM 4: KLASOR YAPISI -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">10 / 37 · KURULUM ADIM 4 / 4</div>
+        <h2 class="slide-title">Proje Klasör Mimarisi: Ne Nerede?</h2>
+        <div class="grid-2-wide" style="align-items:start;">
+          <figure class="guide-fig">
+            <img src="assets/guide-folder-structure.svg" alt="atolye-baslangic Klasör Yapısı ve Dosya Görevleri" />
+            <figcaption class="guide-fig-cap"><span>atolye-baslangic/ Klasör Yapısı</span><span>🔍 Büyüt</span></figcaption>
+          </figure>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.1rem; margin-bottom:10px;">Klasörlerin Görevleri</h3>
+            <ul class="bullet-list">
+              <li><strong><code>examples/</code>:</strong> Atölyede sırayla çalıştıracağımız 01–10 arası temiz ve öğretici Python kodları.</li>
+              <li><strong><code>src/</code>:</strong> Yüz, el ve cilt modüllerinin kütüphane yapısı ile birleşik <code>main.py</code> uygulaması.</li>
+              <li><strong><code>models/</code>:</strong> MediaPipe'ın yerel <code>.task</code> yapay zekâ ağırlıkları (internetsiz çalışır).</li>
+              <li><strong><code>scripts/</code>:</strong> Model indirme ve kamera/ortam doğrulama araçları.</li>
+            </ul>
+            <div style="margin-top:12px;">
+              <a href="https://github.com/yes3760/opencv/tree/main/atolye-baslangic" target="_blank" rel="noopener" class="btn-primary" style="text-decoration:none; padding:8px 16px; font-size:0.82rem; display:inline-block;">🔗 Başlangıç Klasörünü GitHub'da Aç</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · SIK KARSILASILAN HATALAR & TEKNIK TUZAKLAR -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">11 / 37 · KURULUM &amp; GERÇEK DÜNYA TUZAKLARI</div>
+        <h2 class="slide-title">Sınıfta En Sık Çıkan 6 Hata ve Anında Çözümü</h2>
+        <p class="slide-lead">Öğrenci raporunun C ve L bölümlerindeki gerçek test bulguları — internetteki eski kodların neden patladığını buradan gör:</p>
+        <div class="grid-3">
+          <div class="card">
+            <span class="tag-mini tag-peach">mp.solutions Yok!</span>
+            <h4 style="margin:7px 0 4px;">Eski MediaPipe API'si Kaldırıldı</h4>
+            <p style="font-size:0.81rem; color:var(--cream-soft);"><code>mediapipe 1.1+</code> paketinde <code>mp.solutions</code> yoktur. İnternetteki çoğu örnek bu yüzden hata verir; projede <strong>Tasks API</strong> (<code>mp.tasks.vision</code>) kullanılır.</p>
+          </div>
+          <div class="card">
+            <span class="tag-mini tag-peach">cv2 Paket Çakışması</span>
+            <h4 style="margin:7px 0 4px;">opencv-python vs contrib</h4>
+            <p style="font-size:0.81rem; color:var(--cream-soft);">İkisi aynı ortama kurulursa aynı <code>cv2</code> klasörünü bozar. Yalnızca <code>requirements.txt</code> içindeki <code>opencv-contrib-python</code> kurulur.</p>
+          </div>
+          <div class="card">
+            <span class="tag-mini">Intel Mac &amp; Python 3.12</span>
+            <h4 style="margin:7px 0 4px;">Doğru Paket Dosyası</h4>
+            <p style="font-size:0.81rem; color:var(--cream-soft);">Intel Mac'te <code>requirements-intel-mac.txt</code> (MediaPipe 0.10.21) kurulur. Python 3.12 hem Apple Silicon hem Intel Mac'te ortak sürümdür.</p>
+          </div>
+          <div class="card">
+            <span class="tag-mini">Türkçe Karakter "?"</span>
+            <h4 style="margin:7px 0 4px;">cv2.putText Sınırlaması</h4>
+            <p style="font-size:0.81rem; color:var(--cream-soft);"><code>cv2.putText</code> ş, ğ, ı, ö, ü harflerini <code>?</code> basar. Projedeki <code>common.draw.put_text</code> bunu Pillow ile temiz çözer.</p>
+          </div>
+          <div class="card">
+            <span class="tag-mini tag-peach">Siyah Görüntü</span>
+            <h4 style="margin:7px 0 4px;">Yanlış Kamera Numarası</h4>
+            <p style="font-size:0.81rem; color:var(--cream-soft);">Mac'te 0 numara iPhone Süreklilik Kamerasına bağlanabilir. <code>--source auto</code> veya <code>--source 1</code> kullanın; Zoom/Teams'i kapatın.</p>
+          </div>
+          <div class="card">
+            <span class="tag-mini">Timestamp Hatası</span>
+            <h4 style="margin:7px 0 4px;">Monotonik Zaman Damgası</h4>
+            <p style="font-size:0.81rem; color:var(--cream-soft);">VIDEO modunda aynı milisaniyede iki kare gelirse hata verir. <code>src/common/frame.py</code> içindeki <code>FrameClock</code> bunu otomatik önler.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 · TEMEL 1: 01_KAMERA.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">12 / 37 · TEMEL ADIM 1 / 3 · KAMERA &amp; FPS</div>
+        <h2 class="slide-title">İlk Kamera Döngüsü (<code>01_kamera.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/01_kamera.py</code>
+              <button class="copy-btn" data-copy="python examples/01_kamera.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:10px;">5 Adımda Kamera Döngüsü</h3>
+              <ul class="bullet-list">
+                <li><strong>1. Aç:</strong> <code>cv2.VideoCapture(0)</code> dahili kameraya bağlanır.</li>
+                <li><strong>2. Oku:</strong> <code>ok, frame = cap.read()</code> her kareyi NumPy dizisi olarak alır.</li>
+                <li><strong>3. Aynala:</strong> <code>cv2.flip(frame, 1)</code> doğal ayna görüntüsü verir.</li>
+                <li><strong>4. Göster:</strong> <code>cv2.imshow</code> + <code>cv2.waitKey(1)</code> pencereyi yeniler (<code>q</code> ile çıkılır).</li>
+                <li><strong>5. Bırak:</strong> <code>finally</code> bloğundaki <code>cap.release()</code> kamera ışığını kapatır.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/01_kamera.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="01_kamera.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="01_kamera.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="01_kamera.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="kw">import</span> cv2
+
+cap = cv2.<span class="fn">VideoCapture</span>(<span class="num">0</span>)
+<span class="kw">try</span>:
+    <span class="kw">while True</span>:
+        ok, frame = cap.<span class="fn">read</span>()       <span class="cm"># kareyi NumPy dizisi olarak oku</span>
+        <span class="kw">if not</span> ok: <span class="kw">break</span>
+
+        frame = cv2.<span class="fn">flip</span>(frame, <span class="num">1</span>)   <span class="cm"># 1: yatay ayna goruntusu</span>
+        h, w, ch = frame.shape
+        cv2.<span class="fn">putText</span>(frame, <span class="str">f"{w}x{h} {frame.dtype}"</span>,
+                    (<span class="num">12</span>, <span class="num">32</span>), cv2.FONT_HERSHEY_SIMPLEX, <span class="num">0.8</span>, (<span class="num">191</span>,<span class="num">212</span>,<span class="num">45</span>), <span class="num">2</span>)
+        cv2.<span class="fn">imshow</span>(<span class="str">"01 Kamera (q: cikis)"</span>, frame)
+
+        <span class="kw">if</span> (cv2.<span class="fn">waitKey</span>(<span class="num">1</span>) &amp; <span class="num">0xFF</span>) <span class="kw">in</span> (<span class="fn">ord</span>(<span class="str">"q"</span>), <span class="num">27</span>):
+            <span class="kw">break</span>
+<span class="kw">finally</span>:
+    cap.<span class="fn">release</span>()                    <span class="cm"># kamerayi mutlaka serbest birak</span>
+    cv2.<span class="fn">destroyAllWindows</span>()</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 · TEMEL 2: 02_PIKSEL_RENK.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">13 / 37 · TEMEL ADIM 2 / 3 · RENK UZAYLARI</div>
+        <h2 class="slide-title">Piksel Okuma &amp; BGR / HSV / LAB (<code>02_piksel_renk.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/02_piksel_renk.py</code>
+              <button class="copy-btn" data-copy="python examples/02_piksel_renk.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:10px;">Sınıfta Yapılacak Canlı Deneyler</h3>
+              <ul class="bullet-list">
+                <li><span class="tag-mini">b Tuşu</span><strong>BGR'yi RGB Sanma Hatası:</strong> Kanallar ters çevrilince yüzlerin maviye döndüğünü canlı gör!</li>
+                <li><span class="tag-mini tag-peach">Tıkla</span>Görüntüye tıkladığında o pikselin BGR, RGB, HSV ve LAB sayıları terminale yazılır.</li>
+                <li><strong>HSV (H 0–179):</strong> Renk tonunu parlaklıktan ayırır; renkli nesne takibinde kullanılır.</li>
+                <li><strong>LAB (a* kanalı):</strong> Yeşil–kırmızı eksenini ölçer; cilt analizi modülünün temelidir.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/02_piksel_renk.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="02_piksel_renk.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="02_piksel_renk.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="02_piksel_renk.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># Kanallari ters cevirerek BGR -> RGB hatasini goster</span>
+swapped = small[:, :, ::-<span class="num">1</span>]
+
+<span class="cm"># Temel renk uzayi donusumleri</span>
+gray = cv2.<span class="fn">cvtColor</span>(small, cv2.COLOR_BGR2GRAY)
+hsv  = cv2.<span class="fn">cvtColor</span>(small, cv2.COLOR_BGR2HSV)
+lab  = cv2.<span class="fn">cvtColor</span>(small, cv2.COLOR_BGR2LAB)
+
+<span class="cm"># Fareyle tiklanan (py, px) pikselini okuma</span>
+b, g, r = small[py, px]
+h, s, v = hsv[py, px]      <span class="cm"># H: renk tonu (0-179)</span>
+L, a, bb = lab[py, px]     <span class="cm"># a: yesil-kirmizi ekseni</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 · TEMEL 3: 03_FILTRE_ESIK.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">14 / 37 · TEMEL ADIM 3 / 3 · KURAL TABANLI HAT</div>
+        <h2 class="slide-title">ROI, Bulanıklaştırma, Otsu Eşik &amp; Kontur (<code>03_filtre_esik.py</code>)</h2>
+        <div class="pipe-flow">
+          <span class="pipe-step">1. ROI Dilimi</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">2. Gri + GaussianBlur</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">3. Otsu Eşikleme</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">4. Morfoloji (Açma/Kapama)</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">5. Kontur Çizimi</span>
+        </div>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/03_filtre_esik.py</code>
+              <button class="copy-btn" data-copy="python examples/03_filtre_esik.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <ul class="bullet-list">
+                <li><strong>ROI (İlgi Bölgesi):</strong> Tüm ekranı değil, fareyle seçtiğin küçük alanı işler — hem hızlanır hem gereksiz detay elenir.</li>
+                <li><strong>Otsu (Otomatik Siyah-Beyaz):</strong> Parlaklık sınırını elle aramak yerine bilgisayar ışığa göre otomatik bulur.</li>
+                <li><strong>Morfoloji (Temizlik):</strong> <em>Açma</em> küçük beyaz lekeleri süpürür, <em>Kapama</em> nesne içindeki küçük delikleri doldurur.</li>
+                <li><strong>Kontur (Sınır Çizgisi):</strong> Temizlenen beyaz nesnelerin dış çevresini çizip alanını ölçer.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/03_filtre_esik.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="03_filtre_esik.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="03_filtre_esik.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="03_filtre_esik.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre">region  = small[y1:y2, x1:x2]
+gray    = cv2.<span class="fn">cvtColor</span>(region, cv2.COLOR_BGR2GRAY)
+blurred = cv2.<span class="fn">GaussianBlur</span>(gray, (k, k), <span class="num">0</span>)
+
+used, binary = cv2.<span class="fn">threshold</span>(
+    blurred, <span class="num">0</span>, <span class="num">255</span>, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+)
+kernel  = cv2.<span class="fn">getStructuringElement</span>(cv2.MORPH_ELLIPSE, (m, m))
+cleaned = cv2.<span class="fn">morphologyEx</span>(
+    cv2.<span class="fn">morphologyEx</span>(binary, cv2.MORPH_OPEN, kernel),
+    cv2.MORPH_CLOSE, kernel
+)
+contours, _ = cv2.<span class="fn">findContours</span>(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+big = [c <span class="kw">for</span> c <span class="kw">in</span> contours <span class="kw">if</span> cv2.<span class="fn">contourArea</span>(c) &gt; <span class="num">80</span>]
+cv2.<span class="fn">drawContours</span>(view[y1:y2, x1:x2], big, -<span class="num">1</span>, TEAL, <span class="num">2</span>)</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 · PROJE 1 (ADIM 1/3): MIMARI & GORSEL -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">15 / 37 · PROJE 1 (ADIM 1 / 3) · AKILLI YÜZ &amp; GÖZ ANALİZİ</div>
+        <h2 class="slide-title">Proje 1: Nasıl Çalışır ve Ekranda Ne Göreceğiz?</h2>
+        <div class="pipe-flow">
+          <span class="pipe-step">1. OpenCV Kareyi Okur (BGR→RGB)</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">2. MediaPipe 478 Yüz Noktası Çıkarır</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">3. EAR Göz Kırpma &amp; Baş Pozu Hesaplanır</span>
+        </div>
+        <div class="grid-2-wide" style="align-items:start;">
+          <figure class="guide-fig">
+            <img src="assets/guide-project1-face.svg" alt="Proje 1 Canlı Çıktı — 478 Yüz Noktası ve EAR Göz Kırpma" />
+            <figcaption class="guide-fig-cap"><span>Proje 1 Canlı Ekran Çıktısı</span><span>🔍 Büyüt</span></figcaption>
+          </figure>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.1rem; margin-bottom:10px;">Projenin 3 Yapı Taşı</h3>
+            <ul class="bullet-list">
+              <li><span class="tag-mini">478 Nokta</span>Göz kapağı, kaş, burun ve dudak hattı 3B koordinat olarak milisaniyede bulunur.</li>
+              <li><span class="tag-mini tag-peach">EAR Oranı</span>Gözün dikey açıklığını yatay genişliğine böler. Uzaklık değişse de kırpma tespiti bozulmaz!</li>
+              <li><span class="tag-mini">Baş Yönelimi</span>Sağa-sola (<code>yaw</code>), yukarı-aşağı (<code>pitch</code>) ve yatma (<code>roll</code>) açıları ölçülür.</li>
+              <li><strong>Gerçek Hayat:</strong> Araçlarda sürücü yorgunluk/uyku uyarısı tam olarak bu EAR mantığıyla çalışır.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 · PROJE 1 (ADIM 2/3): 04_YUZ_TESPITI.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">16 / 37 · PROJE 1 (ADIM 2 / 3) · YÜZ TESPİTİ</div>
+        <h2 class="slide-title">Klasik Haar vs MediaPipe 478 Nokta (<code>04_yuz_tespiti.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/04_yuz_tespiti.py</code>
+              <button class="copy-btn" data-copy="python examples/04_yuz_tespiti.py">Kopyala</button>
+            </div>
+            <div class="cmd-block" style="border-color:rgba(235,161,130,0.4); color:var(--peach);">
+              <code>python examples/04_yuz_tespiti.py --yontem haar</code>
+              <button class="copy-btn" data-copy="python examples/04_yuz_tespiti.py --yontem haar">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">Kodun Adım Adım Akışı</h3>
+              <ul class="bullet-list">
+                <li><strong>1. Hazırlık:</strong> <code>prepare(raw)</code> kareyi küçültür ve BGR'den RGB'ye çevirir.</li>
+                <li><strong>2. Model:</strong> <code>faces.process(frame)</code> MediaPipe Tasks API ile 478 noktayı bulur.</li>
+                <li><strong>3. Önce Çiz, Sonra Aynala:</strong> Model düz görüntüyü görür; çizim yapılıp sonra <code>canvas.flip()</code> uygulanır ki yazılar ters çıkmasın!</li>
+                <li><span class="tag-mini">m Tuşu</span>Çizim stilini canlı değiştirir: <strong>kontur / ağ / nokta</strong>.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/04_yuz_tespiti.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="04_yuz_tespiti.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="04_yuz_tespiti.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="04_yuz_tespiti.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="kw">with</span> <span class="fn">Camera</span>(args.source, W, H) <span class="kw">as</span> cam, \
+     <span class="fn">FaceTracker</span>(max_faces=args.max_faces) <span class="kw">as</span> faces, \
+     <span class="fn">DisplayLoop</span>(<span class="str">"04 Yuz noktalari"</span>, args) <span class="kw">as</span> loop:
+
+    <span class="kw">while</span> loop.running:
+        frame  = <span class="fn">prepare</span>(cam.<span class="fn">read</span>())     <span class="cm"># 1. boyut + RGB + mp.Image</span>
+        result = faces.<span class="fn">process</span>(frame)    <span class="cm"># 2. 478 nokta tespiti</span>
+
+        canvas = <span class="fn">Canvas</span>(frame, mirror=<span class="kw">True</span>)
+        <span class="kw">for</span> face <span class="kw">in</span> result.faces:        <span class="cm"># 3. sekilleri ciz</span>
+            <span class="fn">draw_face</span>(canvas.image, canvas.<span class="fn">pts</span>(face.points),
+                      canvas.<span class="fn">pts</span>(face.box), STYLES[style])
+        canvas.<span class="fn">flip</span>()                    <span class="cm"># 4. ekrana ayna uygula</span>
+        <span class="kw">if</span> loop.<span class="fn">show</span>(canvas.image) == <span class="fn">ord</span>(<span class="str">"m"</span>):
+            style = (style + <span class="num">1</span>) % <span class="num">3</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · TESPIT vs TAKIP vs TANIMA & EMA YUMUSATMA (05_yuz_takip.py) -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">17 / 37 · PROJE 1 · TAKİP &amp; SİNYAL YUMUŞATMA</div>
+        <h2 class="slide-title">Tespit, Takip, Tanıma Farkı &amp; EMA Yumuşatma</h2>
+        <div class="grid-3" style="margin-bottom:14px;">
+          <div class="card"><span class="tag-mini">1. Tespit (Detection)</span><p style="font-size:0.83rem; color:var(--cream-soft); margin-top:6px;"><em>"Bu karede yüz var mı, nerede?"</em> Her karede kutu veya 478 nokta üretir.</p></div>
+          <div class="card card-mint"><span class="tag-mini">2. Takip (Tracking)</span><p style="font-size:0.83rem; color:var(--cream-soft); margin-top:6px;"><em>"Önceki karedeki yüz bu karede hangisi?"</em> İz numarası verir; yüz çıkıp girerse numara değişir.</p></div>
+          <div class="card"><span class="tag-mini tag-peach">3. Tanıma (Recognition)</span><p style="font-size:0.83rem; color:var(--cream-soft); margin-top:6px;"><em>"Bu kişi kim?"</em> Kimlik tanıma ve gözetim MediaPipe model kartlarına göre kapsam dışıdır.</p></div>
+        </div>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/05_yuz_takip.py</code>
+              <button class="copy-btn" data-copy="python examples/05_yuz_takip.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <ul class="bullet-list">
+                <li><strong>EMA (Yumuşatma Nedir?):</strong> Kameradan gelen titrek noktayı önceki konumuyla karıştırıp akıcı hale getirir (<code>yeni = α·ölçüm + (1−α)·eski</code>).</li>
+                <li><strong>α Küçülürse (0.10):</strong> Çizgi çok pürüzsüz olur ama elini hızlı çevirince hafif geriden gelir.</li>
+                <li><strong>α Büyürse (0.80):</strong> Anında tepki verir ama küçük kamera titremeleri ekrana yansır.</li>
+                <li><strong>One Euro Filtresi:</strong> Yavaşken yumuşatan, hızlı hareket edince gecikmeyi azaltan akıllı filtre.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/05_yuz_takip.py (+ / - ile α ayarı)</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="05_yuz_takip.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="05_yuz_takip.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="05_yuz_takip.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># Gri cizgi: ham olcum | Turkuaz cizgi: EMA yumusatilmis iz</span>
+<span class="cm"># + ve - tuslariyla alpha degerini canli degistirip dene!</span>
+options = vision.<span class="fn">FaceLandmarkerOptions</span>(
+    base_options=<span class="fn">base_options</span>(config.FACE_MODEL),
+    running_mode=vision.RunningMode.VIDEO,  <span class="cm"># takip acik</span>
+    num_faces=<span class="num">1</span>,
+    output_facial_transformation_matrixes=<span class="kw">True</span>
+)
+result = landmarker.<span class="fn">detect_for_video</span>(frame.mp_image, frame.timestamp_ms)</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 · PROJE 1 (ADIM 3/3): 06_YUZ_GEOMETRISI.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">18 / 37 · PROJE 1 (ADIM 3 / 3) · EAR &amp; BAŞ POZU</div>
+        <h2 class="slide-title">Göz Kırpma Sayacı &amp; Geometri (<code>06_yuz_geometrisi.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/06_yuz_geometrisi.py</code>
+              <button class="copy-btn" data-copy="python examples/06_yuz_geometrisi.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">Ölçümler Nasıl Hesaplanıyor?</h3>
+              <ul class="bullet-list">
+                <li><strong>1. Geometrik EAR:</strong> <code>eye_aspect_ratio</code> sol ve sağ gözün dikey/yatay oranını hesaplar; göz kapanınca oran hızla 0.20 altına düşer.</li>
+                <li><strong>2. Kırpma Sayacı:</strong> <code>BlinkDetector</code> gözün kapanıp tekrar açılmasını tek bir kırpma olarak sayar.</li>
+                <li><strong>3. Öğrenilmiş Blendshape:</strong> Modelin kendi 0–1 arası <code>eyeBlinkLeft</code> skoruyla kural tabanlı EAR'ı yan yana karşılaştırırız.</li>
+                <li><span class="tag-mini tag-peach">Etik Sınır</span>Kamera yalnızca gözlenebilir hareketi ölçer; kişilik veya duygu çıkarımı yapmaz.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/06_yuz_geometrisi.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="06_yuz_geometrisi.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="06_yuz_geometrisi.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="06_yuz_geometrisi.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre">face = result.faces[<span class="num">0</span>]
+p    = face.points
+
+<span class="cm"># 1. Kural tabanli olcum: Goz aciklik orani (EAR) &amp; kirpma sayaci</span>
+ear    = (<span class="fn">eye_aspect_ratio</span>(p, RIGHT_EYE_EAR) +
+          <span class="fn">eye_aspect_ratio</span>(p, LEFT_EYE_EAR)) / <span class="num">2</span>
+closed = blink.<span class="fn">update</span>(ear)
+mar    = <span class="fn">mouth_aspect_ratio</span>(p)
+
+<span class="cm"># 2. Ogrenilmis model ciktisi (blendshapes: 0.0 - 1.0)</span>
+bs = face.blendshapes
+<span class="fn">print</span>(<span class="str">f"Kirpma: {blink.blinks} | EAR: {ear:.2f} | "</span>
+      <span class="str">f"Sol: {bs.get('eyeBlinkLeft', 0):.2f} | Yaw: {face.pose.yaw:+.0f}°"</span>)</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · POZ HATASI GRAFIGI (SEKIL G1) & BIR KAMERA NEYI OLCEBILIR? -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">19 / 37 · ÖLÇÜMÜN SINIRLARI &amp; ETİK</div>
+        <h2 class="slide-title">Poz Hatası (%12) ve "Bir Kamera Neyi Ölçebilir?"</h2>
+        <div class="grid-2-wide" style="align-items:start;">
+          <figure class="guide-fig" style="background:#ffffff;">
+            <img src="assets/sekil_poz_oran.png" alt="Şekil G1 — Baş dönüşü arttıkça yüz uzunluk/genişlik oranının %12 sapması" />
+            <figcaption class="guide-fig-cap"><span>Şekil G1 · Baş 30° Dönünce Oran 1.29 → 1.45 (%12 Sapma!)</span><span>🔍 Büyüt</span></figcaption>
+          </figure>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.08rem; margin-bottom:10px;">Kritik Mühendislik ve Etik Gerçekler</h3>
+            <ul class="bullet-list">
+              <li><span class="tag-mini">Ölçülebilenler</span>Nokta konumu, oranlar, göz kırpma (EAR), ağız açıklığı, baş yönelimi ve hareket hızı.</li>
+              <li><span class="tag-mini tag-peach">Ölçülemeyenler</span>Kamera yalnızca piksel ışığını kaydeder; <strong>mutluluk/duygu, kişilik, zekâ veya güvenilirlik</strong> çıkarılamaz (Barrett vd., 2019).</li>
+              <li><strong>Poz Etkisi:</strong> Mesafe değişse de oran sabit kalır ama baş 30° dönünce oran <strong>%12 şişer</strong> — bu yüzden sistem yalnızca önden pozda sonuç verir!</li>
+              <li><strong>Derinlik (z):</strong> Tek kamera gerçek santimetre ölçmez; <code>z</code> yalnızca yüz merkezine göreli derinliktir.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 · PROJE 2 (ADIM 1/3): MIMARI & GORSEL -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">20 / 37 · PROJE 2 (ADIM 1 / 3) · TEMASSIZ EL JESTLERİ</div>
+        <h2 class="slide-title">Proje 2: El Hareketini Güvenilir Komuta Çevirme</h2>
+        <div class="pipe-flow">
+          <span class="pipe-step">1. 21 El Noktası</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">2. Eklem Açıları (angle_deg)</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">3. Pinch + Histerezis</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">4. Temassız Sürgü / Kutu / Çizim</span>
+        </div>
+        <div class="grid-2-wide" style="align-items:start;">
+          <figure class="guide-fig">
+            <img src="assets/guide-project2-hand.svg" alt="Proje 2 Canlı Çıktı — 21 El Noktası, Pinch ve Sürükleme" />
+            <figcaption class="guide-fig-cap"><span>Proje 2 Canlı Ekran Çıktısı</span><span>🔍 Büyüt</span></figcaption>
+          </figure>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.1rem; margin-bottom:10px;">Neden Sadece Mesafe Yetmez?</h3>
+            <ul class="bullet-list">
+              <li><span class="tag-mini">Kilit Noktalar</span><strong>0: Bilek</strong> · <strong>4: Başparmak ucu</strong> · <strong>8: İşaret parmağı ucu (ekran imleci)</strong>.</li>
+              <li><span class="tag-mini tag-peach">Histerezis</span>Tek eşik (örn. 0.30) parmak titreyince saniyede 10 kez komut patlatır. <strong>Giriş 0.25 / Çıkış 0.40</strong> çift eşiği ile 1 hareket = 1 komut!</li>
+              <li><span class="tag-mini">Güvenlik</span>El kadrajdan çıkınca 300 ms içinde durum otomatik sıfırlanır; sürüklenen nesne takılı kalmaz.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · TEK ESIK vs HISTEREZIS GRAFIGI (SEKIL H1) -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">21 / 37 · PROJE 2 · JEST KARARLILIĞI (ŞEKİL H1)</div>
+        <h2 class="slide-title">Gürültülü Sinyalden Tek Komut: Tek Eşik vs Histerezis</h2>
+        <div class="grid-2-wide" style="align-items:start;">
+          <figure class="guide-fig" style="background:#ffffff;">
+            <img src="assets/sekil_histerezis.png" alt="Şekil H1 — Tek eşikte 9 komut, histereziste 1 temiz komut" />
+            <figcaption class="guide-fig-cap"><span>Şekil H1 · Tek Eşik = 9 Komut, Histerezis = 1 Temiz Komut</span><span>🔍 Büyüt</span></figcaption>
+          </figure>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.08rem; margin-bottom:10px;">4 Katmanlı Kararlılık (Günlük Hayattan Örneklerle)</h3>
+            <ul class="bullet-list">
+              <li><span class="tag-mini">1. Histerezis (Çift Eşik)</span> <strong>Kombi termostatı gibi:</strong> Parmaklar <strong>0.25</strong>'te tutar, <strong>0.40</strong>'ta bırakır. Aradaki tampon boşluk parmak titremesini yutar.</li>
+              <li><span class="tag-mini">2. Debounce (Bekleme)</span> <strong>Yanlışlıkla anlık dokunmayı eler:</strong> Hareket en az <strong>120 ms</strong> sabit durmazsa gerçek komut sayılmaz.</li>
+              <li><span class="tag-mini tag-peach">3. Cooldown (Dinlenme)</span> <strong>Üst üste çift tıklamayı önler:</strong> Bir komuttan sonra <strong>700 ms</strong> boyunca yeni jest tetiklenmez.</li>
+              <li><span class="tag-mini">4. Kenar Tetikleme</span> <strong>Tek tık mantığı:</strong> Parmaklar kapalı durdukça sürekli değil, yalnızca ilk birleştiği anda <strong>1 kez</strong> komut verir.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18 · PROJE 2 (ADIM 2/3): 07_EL_NOKTALARI.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">22 / 37 · PROJE 2 (ADIM 2 / 3) · 21 EKLEM NOKTASI</div>
+        <h2 class="slide-title">Parmak Açıları &amp; Sağ/Sol Deneyi (<code>07_el_noktalari.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/07_el_noktalari.py</code>
+              <button class="copy-btn" data-copy="python examples/07_el_noktalari.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">Adım Adım Parmak Durumu</h3>
+              <ul class="bullet-list">
+                <li><span class="tag-mini">n Tuşu</span>Ekranda 0–20 arası tüm eklem numaralarını açıp kapatır.</li>
+                <li><strong>Neden Açı (<code>angle_deg</code>)?</strong> "Uç eklemin üstünde mi?" kuralı el yana/ters dönünce bozulur; orta eklem açısı el nasıl dönerse dönsün doğru kalır!</li>
+                <li><strong>Sağ/Sol Kontrolü:</strong> Yalnızca sağ elini kaldır, ekranda "sağ" yazmalı (ters ise <code>src/config.py</code> → <code>HANDEDNESS_SWAP = True</code>).</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/07_el_noktalari.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="07_el_noktalari.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="07_el_noktalari.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="07_el_noktalari.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="kw">for</span> hand <span class="kw">in</span> result.hands:
+    states  = <span class="fn">finger_states</span>(hand.points)
+    gesture = GESTURE_NAMES[<span class="fn">classify_static</span>(states)]
+
+    <span class="cm"># Her parmak icin orta eklem acisini derece olarak hesapla</span>
+    <span class="kw">for</span> name, (a, b, c, d) <span class="kw">in</span> FINGERS.<span class="fn">items</span>():
+        angle = <span class="fn">angle_deg</span>(hand.points[a], hand.points[b], hand.points[c])
+        <span class="cm"># aci buyukse parmak acik, kucukse kapali</span>
+        <span class="fn">print</span>(<span class="str">f"{hand.label_tr} el · {name}: {angle:.0f}° ({states[name]})"</span>)</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19 · PROJE 2 (ADIM 3/3): 08_EL_JESTLERI.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">23 / 37 · PROJE 2 (ADIM 3 / 3) · HAVA ÇİZİMİ &amp; JEST STÜDYOSU</div>
+        <h2 class="slide-title">Havada İsim Yazma, 1–5 Parmak Renk &amp; Yumrukla Sil (<code>08_el_jestleri.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/08_el_jestleri.py</code>
+              <button class="copy-btn" data-copy="python examples/08_el_jestleri.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">Tüm Hareketleri Canlı Dene!</h3>
+              <ul class="bullet-list">
+                <li><strong>☝️ İşaret Parmağı:</strong> Havada karalama yap ve ekrana <strong>kendi adını yaz</strong>!</li>
+                <li><strong>🖐️ 1–5 Parmak Göster (0.35 sn tut):</strong> 5 renkli paletten canlı renk değiştir (veya <code>1–5</code> tuşları).</li>
+                <li><strong>✊ Yumruk (0.7 sn tut):</strong> İlerleme çubuğu dolunca tüm çizimi <strong>siler</strong> · <strong>🤏 Pinch:</strong> Fırça kalınlığı sürgüsü &amp; kutu taşı!</li>
+                <li><span class="tag-mini">F Tuşu</span>Tüm VISION LAB pencerelerinde <strong>Özellikler &amp; Kullanım</strong> rehberini açar · <span class="tag-mini tag-peach">s Tuşu</span>Çizimi PNG kaydet!</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/08_el_jestleri.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="08_el_jestleri.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="08_el_jestleri.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="08_el_jestleri.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># 1. Isaret parmagiyla aktif renkte havada cizim / isim yazma</span>
+drawing.<span class="fn">update</span>(cursor, ciziyor, color=renk_bgr, thickness=firca_kalinlik)
+
+<span class="cm"># 2. 2-5 parmak gosterimi (0.35 sn) -> 5 renkli paletten renk sec</span>
+<span class="kw">if</span> parmak_n <span class="kw">in</span> (<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>) <span class="kw">and</span> now_ms - color_hold_since &gt;= <span class="num">350</span>:
+    aktif_renk_idx = parmak_n - <span class="num">1</span>
+
+<span class="cm"># 3. Yumruk (0 parmak, 0.7 sn tut) -> tum cizimi temizle!</span>
+<span class="kw">if</span> (state.gesture == <span class="str">"yumruk"</span> <span class="kw">or</span> parmak_n == <span class="num">0</span>) <span class="kw">and</span> silme_orani &gt;= <span class="num">1.0</span>:
+    drawing.<span class="fn">clear</span>()</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · CILT GORUNUMU ANALIZI & ISIGIN ETKISI (SEKIL I1) -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">24 / 37 · PROJE 3 (ADIM 1 / 3) · CİLT GÖRÜNÜMÜ ANALİZİ</div>
+        <h2 class="slide-title">Proje 3: Bölgeler, Kalite Kontrolü &amp; Işık Etkisi</h2>
+        <div class="grid-2-wide" style="align-items:start;">
+          <figure class="guide-fig" style="background:#ffffff;">
+            <img src="assets/sekil_bolgeler.png" alt="Şekil I1 — Alın ve iki yanak analiz bölgeleri; göz, kaş, dudak dışlama" style="max-height:340px; object-fit:contain; margin:0 auto;" />
+            <figcaption class="guide-fig-cap"><span>Şekil I1 · Alın + Sağ/Sol Yanak Maskeleri (Göz/Dudak Dışlanır)</span><span>🔍 Büyüt</span></figcaption>
+          </figure>
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.05rem; margin-bottom:8px;">Cilt Aynı, Işık Farklı → Sayılar Nasıl Değişir?</h3>
+            <ul class="bullet-list">
+              <li><span class="tag-mini">Kalite Kapısı</span>Tek yüz, min. 180 px genişlik, önden poz, netlik ve pozlama geçmezse <strong>sonuç üretilmez</strong>.</li>
+              <li><span class="tag-mini tag-peach">Işık Deneyi</span>Aynı fotoğrafta sıcak ışıkta alnın <code>a*</code> değeri <strong>15.7 → 24.2</strong>; yan ışıkta iki yanak arası <code>ΔE</code> <strong>3.1 → 27.2</strong> olmuştur!</li>
+              <li><strong>Neden Göreli Ölçüm?</strong> Mutlak eşik açık ten/stüdyo ışığında %80'i "parlak" sanar; göreli <code>Δa*</code> bu yanılgıyı engeller.</li>
+              <li><span class="tag-mini tag-peach">Uyarı</span>Eğitim amaçlı görüntü analizidir; tıbbi tanı veya nem/kolajen ölçümü değildir.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · PROJE 3 (ADIM 2/3): 09_CILT_BOLGELERI.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">25 / 37 · PROJE 3 (ADIM 2 / 3) · BÖLGE ÇIKARMA &amp; SEGMENTASYON</div>
+        <h2 class="slide-title">Alın &amp; Yanak Maskeleri + Saç Ayrımı (<code>09_cilt_bolgeleri.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/09_cilt_bolgeleri.py</code>
+              <button class="copy-btn" data-copy="python examples/09_cilt_bolgeleri.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">Bölgeler Nasıl Temizleniyor?</h3>
+              <ul class="bullet-list">
+                <li><strong>1. Çokgen Maskesi:</strong> 478 yüz noktasından alın, sağ yanak ve sol yanak çokgenleri çizilir.</li>
+                <li><strong>2. Dışlama &amp; Aşındırma:</strong> Göz, kaş ve dudak maskeden çıkarılır; kenarlardan içeri aşındırılır (<code>SKIN_ROI_EROSION_RATIO</code>).</li>
+                <li><span class="tag-mini">s Tuşu</span><strong>Selfie Multiclass Segmenter</strong> modelini canlı açıp kapatarak saç/aksesuar maskeleme farkını gözle!</li>
+                <li><strong>Güvenli Yedek:</strong> Segmentasyon modeli yoksa renk tutarlılığı yöntemiyle otomatik devam eder.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/09_cilt_bolgeleri.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="09_cilt_bolgeleri.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="09_cilt_bolgeleri.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="09_cilt_bolgeleri.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="kw">if</span> <span class="fn">len</span>(result.faces) == <span class="num">1</span>:
+    face = result.faces[<span class="num">0</span>]
+    <span class="cm"># 1. Segmentasyon modeli ile sac/cilt maskesi uret (s tusu ile ac/kapat)</span>
+    seg = segmenter.<span class="fn">segment</span>(canvas.image) <span class="kw">if</span> use_seg <span class="kw">else None</span>
+
+    <span class="cm"># 2. Alin &amp; yanak maskelerini olustur, goz/dudak/saci disla</span>
+    regions = <span class="fn">build_region_masks</span>(
+        canvas.image, canvas.<span class="fn">pts</span>(face.points),
+        face.width_px * canvas.scale,
+        config.SKIN_ROI_EROSION_RATIO, seg
+    )
+    <span class="fn">draw_regions</span>(canvas.image, regions)</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · PROJE 3 (ADIM 3/3): 10_CILT_ANALIZI.PY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">26 / 37 · PROJE 3 (ADIM 3 / 3) · KALİTE KONTROLÜ &amp; ISI HARİTASI</div>
+        <h2 class="slide-title">Açıklanabilir Cilt Görünümü Analizi (<code>10_cilt_analizi.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python examples/10_cilt_analizi.py</code>
+              <button class="copy-btn" data-copy="python examples/10_cilt_analizi.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">Tek Kare Analiz &amp; Kontroller</h3>
+              <ul class="bullet-list">
+                <li><span class="tag-mini">Boşluk (Space)</span>Kalite listesi tamamen yeşilse tek kare alıp <strong>~37 ms</strong> içinde analiz eder (görüntü kaydedilmez).</li>
+                <li><span class="tag-mini tag-peach">1–4 Tuşları</span>Sabit aralıklı ısı haritaları arasında geç: <code>Δa*</code> (kızarıklık), parlaklık, doku değişimi ve <code>ΔE76</code> renk farkı.</li>
+                <li><strong>Kalite Reddi:</strong> Baş dönerse, ışık çok düşükse veya 2 kişi varsa <code>quality.ok == False</code> olur ve sonuç üretilmez.</li>
+                <li><strong>Otomatik Mod:</strong> <code>--otomatik</code> parametresiyle 2 saniyede bir güncellenir.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>examples/10_cilt_analizi.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="10_cilt_analizi.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="10_cilt_analizi.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="10_cilt_analizi.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># Kalite onizlemesi 0.5 sn'de bir guncellenir</span>
+<span class="kw">if</span> now - last_preview &gt;= PREVIEW_INTERVAL_S:
+    preview = analyzer.<span class="fn">analyze</span>(frame.full_bgr, result.faces, frame.scale_to_full)
+
+<span class="cm"># Bosluk tusu: tek karede aciklanabilir analiz | 1-4: isi haritasi sec</span>
+key = loop.<span class="fn">show</span>(np.<span class="fn">hstack</span>([img, <span class="fn">result_panel</span>(captured, map_name)]))
+<span class="kw">if</span> key == <span class="fn">ord</span>(<span class="str">" "</span>):
+    captured = analyzer.<span class="fn">analyze</span>(frame.full_bgr, result.faces, frame.scale_to_full)
+<span class="kw">elif</span> <span class="fn">ord</span>(<span class="str">"1"</span>) &lt;= key &lt;= <span class="fn">ord</span>(<span class="str">"4"</span>):
+    map_name = MAP_KEYS[key - <span class="fn">ord</span>(<span class="str">"1"</span>)]</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · SINIFLANDIRMA vs TESPIT vs SEGMENTASYON & LISANS/ETIK -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">27 / 37 · DERİN ÖĞRENME GÖREVLERİ &amp; AÇIK KAYNAK ETİĞİ</div>
+        <h2 class="slide-title">Sınıflandırma · Tespit · Segmentasyon &amp; Model Seçimi</h2>
+        <div class="grid-3" style="margin-bottom:14px;">
+          <div class="card"><span class="tag-mini">1. Sınıflandırma</span><p style="font-size:0.83rem; color:var(--cream-soft); margin-top:6px;">Tüm görüntüye <strong>tek etiket</strong> verir (örn. "kedi" veya "2. derece"). Nerede olduğunu söylemez.</p></div>
+          <div class="card"><span class="tag-mini">2. Tespit (Detection)</span><p style="font-size:0.83rem; color:var(--cream-soft); margin-top:6px;">Nesnelerin yerini <strong>dikdörtgen kutu (bbox)</strong> ve sınıf etiketiyle gösterir (YOLO, BlazeFace).</p></div>
+          <div class="card card-mint"><span class="tag-mini">3. Segmentasyon</span><p style="font-size:0.83rem; color:var(--cream-soft); margin-top:6px;"><strong>Her piksele</strong> ayrı sınıf atar (saç, yüz cildi, arka plan). Projede <em>Selfie Multiclass</em> kullanılır.</p></div>
+        </div>
+        <div class="grid-2">
+          <div class="card card-mint">
+            <span class="tag-mini">✓ NEDEN ENTEGRE EDİLDİ?</span>
+            <h4 style="margin:6px 0 4px;">MediaPipe Selfie Multiclass Segmenter</h4>
+            <p style="font-size:0.82rem; color:var(--cream-soft);">Apache-2.0 açık lisanslı, 16.4 MB, CPU'da <strong>33 ms</strong>, Monk 10 cilt tonu adalet değerlendirmeli. Yalnızca saç/cilt ayrımı yapar; tanı koymaz.</p>
+          </div>
+          <div class="card">
+            <span class="tag-mini tag-peach">✕ NEDEN ENTEGRE EDİLMEDİ?</span>
+            <h4 style="margin:6px 0 4px;">acne-lds &amp; VitalGaze Değerlendirmesi</h4>
+            <p style="font-size:0.82rem; color:var(--cream-soft);"><strong>acne-lds:</strong> Ağırlık lisansı belirsiz + klinik veri/webcam farkı + tıbbi derecelendirme riski. <strong>VitalGaze:</strong> Lisanssız + belirsiz pickle dosyası. <em>Her açık GitHub reposu üretime alınmaz!</em></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · BIRLESIK MIMARI & CPU PERFORMANS BENCHMARK -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">28 / 37 · SİSTEM MİMARİSİ &amp; GERÇEK PERFORMANS</div>
+        <h2 class="slide-title">Tek Kamera, Ortak Kare &amp; CPU Hız Ölçümleri</h2>
+        <div class="pipe-flow">
+          <span class="pipe-step">camera.py (1280×720)</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">common/frame.py (640px + RGB)</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">face (5.9 ms) + hands (5.4 ms)</span><span class="pipe-arrow">→</span>
+          <span class="pipe-step">skin (37 ms · tek kare)</span>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="font-size:1.05rem; margin-bottom:8px;">Mühendislik Tasarım Kararları</h3>
+            <ul class="bullet-list">
+              <li><strong>Ortak Kare:</strong> Görüntü her döngüde yalnızca 1 kez okunur ve 1 kez RGB'ye çevrilir.</li>
+              <li><strong>Modeller Bir Kez Yüklenir:</strong> Döngü içinde model başlatmak FPS'i öldürür.</li>
+              <li><strong>Merkezi Eşikler:</strong> Tüm eşikler tek dosya olan <code>src/config.py</code> içinde belgelenir.</li>
+              <li><strong>Yalıtılmış Hata:</strong> Bir model dosyası eksikse yalnızca o modül kapanır; uygulama çökmez.</li>
+            </ul>
+          </div>
+          <div class="card card-mint">
+            <h3 style="font-size:1.05rem; margin-bottom:8px;">Gerçek Benchmark Sonuçları (<code>scripts/benchmark.py</code>)</h3>
+            <div class="tl-list">
+              <div class="tl-row highlight"><span class="tl-time">Yüz Modeli</span><span>478 nokta · Apple M4 CPU</span><span class="tl-dur">5.9 ms</span></div>
+              <div class="tl-row highlight"><span class="tl-time">El Modeli</span><span>21 nokta · Apple M4 CPU</span><span class="tl-dur">5.4 ms</span></div>
+              <div class="tl-row"><span class="tl-time">Yüz + El</span><span>33 ms (30 FPS) bütçesinin 1/3'ü!</span><span class="tl-dur">11.6 ms</span></div>
+              <div class="tl-row"><span class="tl-time">Cilt Analizi</span><span>Segmentasyon dahil tek kare</span><span class="tl-dur">37 ms</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · SINIFTA 5 HIZLI DENEY & OPENCV KOPYA KAGIDI -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">29 / 37 · UYGULAMALI DENEYLER &amp; KOPYA KAĞIDI</div>
+        <h2 class="slide-title">Sınıfta Yapılacak 5 Deney &amp; OpenCV Kopya Kağıdı</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="font-size:1.05rem; margin-bottom:8px;">Rapordan 5 Hızlı Gözlem Deneyi</h3>
+            <ul class="bullet-list">
+              <li><strong>1. Işık &amp; Otsu:</strong> Oda ışığını değiştirip sabit eşik vs Otsu kontur sayısını kıyasla (<code>03</code>).</li>
+              <li><strong>2. EMA Tepkisi:</strong> <code>05_yuz_takip.py</code>'de <code>α=0.10</code> ve <code>0.80</code> ile başını hızlı çevir.</li>
+              <li><strong>3. Mesafe vs Poz:</strong> 40 cm vs 80 cm uzaklıkta oran sabit; başı 20° çevirince oran sapar (<code>06</code>).</li>
+              <li><strong>4. Debounce Testi:</strong> <code>GESTURE_STABLE_MS=0</code> yapıp pinch sınırında komut patlamasını gör (<code>08</code>).</li>
+              <li><strong>5. Işık Yönü:</strong> Pencereye düz vs yan dönüp <code>ΔE</code> değişimini gözle (<code>10</code>).</li>
+            </ul>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>OpenCV Hızlı Kopya Kağıdı (Cheat Sheet)</span>
+              <button class="copy-btn" data-copy="#cheatSheet">📋 Kopyala</button>
+            </div>
+            <pre class="code-pre" id="cheatSheet">cap = cv2.<span class="fn">VideoCapture</span>(<span class="num">0</span>)                           <span class="cm"># Kamerayı aç</span>
+ok, frame = cap.<span class="fn">read</span>()                              <span class="cm"># Kare oku (BGR)</span>
+frame = cv2.<span class="fn">flip</span>(frame, <span class="num">1</span>)                          <span class="cm"># Ayna görüntüsü</span>
+rgb  = cv2.<span class="fn">cvtColor</span>(frame, cv2.COLOR_BGR2RGB)       <span class="cm"># Renk dönüşümü</span>
+blur = cv2.<span class="fn">GaussianBlur</span>(gray, (<span class="num">5</span>, <span class="num">5</span>), <span class="num">0</span>)            <span class="cm"># Gürültü azalt</span>
+edge = cv2.<span class="fn">Canny</span>(blur, <span class="num">60</span>, <span class="num">150</span>)                     <span class="cm"># Kenar bul</span>
+_, bw = cv2.<span class="fn">threshold</span>(blur, <span class="num">0</span>, <span class="num">255</span>, cv2.THRESH_OTSU) <span class="cm"># Otomatik eşik</span>
+cnts, _ = cv2.<span class="fn">findContours</span>(bw, cv2.RETR_EXTERNAL, <span class="num">2</span>) <span class="cm"># Kontur çıkar</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20 · FINAL VITRIN & YEDEK PROJELER -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">30 / 37 · FİNAL VİTRİN &amp; YEDEK PROJELER</div>
+        <h2 class="slide-title">Birleşik Uygulama (<code>src/main.py</code>) &amp; Bonuslar</h2>
+        <div class="grid-2-code">
+          <div class="card card-mint">
+            <span class="tag-mini">CANLI SAHNE VİTRİNİ</span>
+            <h3 style="font-size:1.12rem; margin:8px 0;">Yüz + El + Cilt Analizi Tek Ekranda</h3>
+            <div class="cmd-block" style="margin-top:10px;">
+              <code>python src/main.py</code>
+              <button class="copy-btn" data-copy="python src/main.py">Kopyala</button>
+            </div>
+            <ul class="bullet-list">
+              <li><strong>1–4 Tuşları:</strong> Yüz, El, Cilt Görünümü ve Birleşik modlar arasında anında geçiş yapar.</li>
+              <li><strong>Boşluk (Space):</strong> Işık ve poz kalite kontrolüyle LAB <code>a*</code> cilt ısı haritası üretir <em>(eğitim amaçlıdır; tıbbi tanı değildir)</em>.</li>
+            </ul>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:9px;">
+            <div class="card" style="padding:11px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+              <div>
+                <span class="tag-mini">BONUS 1 · HSV</span>
+                <h4 style="margin:4px 0 2px;">Sanal Çizim Tahtası (<code>bonus1_sanal_kalem.py</code>)</h4>
+                <p style="font-size:0.78rem; color:var(--cream-soft);">Renkli kalem kapağını HSV maskesiyle takip edip havada çizim yap.</p>
+              </div>
+              <div class="code-actions">
+                <button class="copy-btn" data-copy-full="bonus1_sanal_kalem.py">📋</button>
+                <button class="dl-btn" data-download-py="bonus1_sanal_kalem.py">⬇ .py</button>
+              </div>
+            </div>
+            <div class="card" style="padding:11px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+              <div>
+                <span class="tag-mini">BONUS 2 · PERSPEKTİF</span>
+                <h4 style="margin:4px 0 2px;">Akıllı Belge Tarayıcı (<code>bonus2_belge_tarayici.py</code>)</h4>
+                <p style="font-size:0.78rem; color:var(--cream-soft);">Kağıdın 4 köşesini bul, <code>s</code> ile düz PDF görünümüne çevir.</p>
+              </div>
+              <div class="code-actions">
+                <button class="copy-btn" data-copy-full="bonus2_belge_tarayici.py">📋</button>
+                <button class="dl-btn" data-download-py="bonus2_belge_tarayici.py">⬇ .py</button>
+              </div>
+            </div>
+            <div class="card card-mint" style="padding:11px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+              <div>
+                <span class="tag-mini tag-peach">MOBİL DEMO</span>
+                <h4 style="margin:4px 0 2px;">Canlı Sınıf Kişi Sayacı</h4>
+                <p style="font-size:0.78rem; color:var(--cream-soft);">Telefon/laptop kamerasıyla sınıftaki kişileri canlı say!</p>
+              </div>
+              <a href="kisi_sayaci.html" class="btn-primary" style="text-decoration:none; padding:8px 14px; font-size:0.8rem; white-space:nowrap;">📷 Aç →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · BONUS 3: SEIS NEON AR VFX STUDYOSU -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">31 / 37 · ÖZEL BONUS PROJE · GERÇEK NEON BLOOM VFX</div>
+        <h2 class="slide-title">SEIS Neon AR El Jestleri Stüdyosu (<code>bonus3_el_kalp_efekti.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python bonus_projeler/bonus3_el_kalp_efekti.py</code>
+              <button class="copy-btn" data-copy="python bonus_projeler/bonus3_el_kalp_efekti.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">7 Canlı AR Efekti + 3 Sahne Modu</h3>
+              <ul class="bullet-list">
+                <li><strong>🫶 İki Elle Kalp:</strong> Neon bloom kalp + şarj barı → <code>%100</code> olunca <strong>Şok Dalgası</strong> &amp; 56 parçacık patlaması!</li>
+                <li><strong>⚡ İki Açık El:</strong> Avuçlar arasında kırılan canlı <strong>plazma şimşek arkı</strong> + büyüyen enerji küresi!</li>
+                <li><strong>🖐️ Tek Açık El / ☝️ İşaret:</strong> Dönen siber mandala halkası + havada sönen neon lazer izi!</li>
+                <li><strong>✌️ V (SEIS) / 👍 Yıldız / ✊ Yumruk:</strong> Konfeti, altın yıldız yağmuru ve enerji çekim alanı!</li>
+                <li><span class="tag-mini">m Tuşu</span>Sinema Neon / Doğal / <strong>TRON Kenar</strong> · <span class="tag-mini tag-peach">s Tuşu</span>Hatıra PNG kaydet!</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>bonus_projeler/bonus3_el_kalp_efekti.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="bonus3_el_kalp_efekti.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="bonus3_el_kalp_efekti.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="bonus3_el_kalp_efekti.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># Gercek Additive Neon Bloom: ayri glow katmani + GaussianBlur + cv2.add</span>
+<span class="kw">def</span> <span class="fn">bloom_birlestir</span>(arka, glow):
+    h, w = glow.shape[:<span class="num">2</span>]
+    kucuk = cv2.<span class="fn">resize</span>(glow, (w // <span class="num">2</span>, h // <span class="num">2</span>))
+    bloom = cv2.<span class="fn">resize</span>(cv2.<span class="fn">GaussianBlur</span>(kucuk, (<span class="num">21</span>, <span class="num">21</span>), <span class="num">0</span>), (w, h))
+    <span class="kw">return</span> cv2.<span class="fn">add</span>(cv2.<span class="fn">add</span>(arka, bloom), glow)
+
+<span class="cm"># Iki elin basparmak (4) ve isaret (8) uclari yaklasinca kalp algila!</span>
+<span class="kw">if</span> bas_d &lt; <span class="num">0.78</span> <span class="kw">and</span> isr_d &lt; <span class="num">0.88</span>:
+    cv2.<span class="fn">fillPoly</span>(glow, [<span class="fn">kalp_pts</span>(cx, cy, nabiz)], PINK, cv2.LINE_AA)</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · BONUS 4: ISIK KAMERAYI NASIL YANILTIR? (1. vs 2. CEKIM DENEYI) -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">32 / 37 · ÖZEL BONUS PROJE 4 · CİLT &amp; IŞIK HİLESİ DENEYİ</div>
+        <h2 class="slide-title">Işık Kamerayı Nasıl Yanıltır? (<code>bonus4_cilt_ayna_studyo.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python bonus_projeler/bonus4_cilt_ayna_studyo.py</code>
+              <button class="copy-btn" data-copy="python bonus_projeler/bonus4_cilt_ayna_studyo.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">2 Adımda Yapay Zekâyı Işıkla Şaşırt!</h3>
+              <ul class="bullet-list">
+                <li><strong>Ne İşe Yarar?</strong> Sosyal medyadaki <em>"yapay zekâ cilt analizi"</em> uygulamalarının tek bir ışık değişimiyle nasıl farklı sonuçlar verdiğini canlı kanıtlar!</li>
+                <li><strong>1. Adım (<code>Boşluk</code>):</strong> Normal oda ışığında <strong>1. Fotoğrafını</strong> çek.</li>
+                <li><strong>2. Adım (<code>Boşluk</code>):</strong> Yüzüne telefon feneri tut (veya pencereye yan dön) ve <strong>2. Fotoğrafını</strong> çek → Cildin hiç değişmediği halde kızarıklık ve parlama sayılarının nasıl değiştiğini yan yana gör!</li>
+                <li><span class="tag-mini">1–4 Tuşları</span>Isı haritası değiştir · <span class="tag-mini">s Tuşu</span>PNG kaydet · <span class="tag-mini tag-peach">Not</span>Tıbbi tanı değildir.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>bonus_projeler/bonus4_cilt_ayna_studyo.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="bonus4_cilt_ayna_studyo.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="bonus4_cilt_ayna_studyo.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="bonus4_cilt_ayna_studyo.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># 1. Bosluk -> Normal isikta 1. Cekim</span>
+<span class="cm"># 2. Bosluk -> Telefon isigi / yan isikta 2. Cekim</span>
+<span class="kw">if</span> key == <span class="fn">ord</span>(<span class="str">" "</span>):
+    yeni = <span class="fn">esnek_cekim_al</span>(analyzer, frame, result.faces)
+    <span class="kw">if</span> cekim_1 <span class="kw">is None</span>:
+        cekim_1 = yeni   <span class="cm"># 1. Cekim (Once)</span>
+    <span class="kw">else</span>:
+        cekim_2 = yeni   <span class="cm"># 2. Cekim (Yeni Isik -> Farki Gor!)</span>
+
+sag = <span class="fn">sag_panel_ciz</span>(cekim_1, cekim_2, map_name, height=img.shape[<span class="num">0</span>])</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · BONUS 5: SEIS SINIF ENERJI & MUTLULUK OLCER -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">33 / 37 · ÖZEL BONUS PROJE 5 · ÇOKLU YÜZ ENERJİ KARŞILAŞTIRMASI</div>
+        <h2 class="slide-title">SEIS Sınıf Enerji Ölçer (<code>bonus5_sinif_enerji_olcer.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python bonus_projeler/bonus5_sinif_enerji_olcer.py</code>
+              <button class="copy-btn" data-copy="python bonus_projeler/bonus5_sinif_enerji_olcer.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">Gün Başı vs. Eğitim Sonu Sınıf Enerjisi</h3>
+              <ul class="bullet-list">
+                <li><strong>12 Yüze Kadar Canlı Ölçüm:</strong> <code>FaceTracker(max_faces=12, blendshapes=True)</code> ile sınıftaki tüm yüzlerin gülümseme (<code>mouthSmile</code>) ve kaş/göz canlılığı skorlarını anlık ölçer.</li>
+                <li><strong>1 Tuşu (Gün Başı · 16:00):</strong> Atölye açılışında sınıfın ortalama enerji yüzdesini ve yüz sayısını kaydeder.</li>
+                <li><strong>2 Tuşu (Eğitim Sonu · 20:00):</strong> Kapanış ölçümünü alır ve ekranda <strong>+Δ% enerji değişimi</strong> tablosunu çıkarır!</li>
+                <li><span class="tag-mini">s Tuşu</span>Karşılaştırma raporunu PNG kaydet · <span class="tag-mini tag-peach">Etik Not</span>Yalnızca yüz kası hareketi ölçülür; gerçek duygu tanısı değildir.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>bonus_projeler/bonus5_sinif_enerji_olcer.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="bonus5_sinif_enerji_olcer.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="bonus5_sinif_enerji_olcer.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="bonus5_sinif_enerji_olcer.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># 12 yuze kadar ayni anda blendshape gulumseme + canlilik skoru</span>
+<span class="kw">def</span> <span class="fn">yuz_enerji_skoru</span>(bs):
+    gulumse = (bs.<span class="fn">get</span>(<span class="str">"mouthSmileLeft"</span>, <span class="num">0</span>) + bs.<span class="fn">get</span>(<span class="str">"mouthSmileRight"</span>, <span class="num">0</span>)) / <span class="num">2</span>
+    yanak = (bs.<span class="fn">get</span>(<span class="str">"cheekSquintLeft"</span>, <span class="num">0</span>) + bs.<span class="fn">get</span>(<span class="str">"cheekSquintRight"</span>, <span class="num">0</span>)) / <span class="num">2</span>
+    kas_catik = (bs.<span class="fn">get</span>(<span class="str">"browDownLeft"</span>, <span class="num">0</span>) + bs.<span class="fn">get</span>(<span class="str">"browDownRight"</span>, <span class="num">0</span>)) / <span class="num">2</span>
+    <span class="kw">return</span> <span class="fn">min</span>(<span class="num">100</span>, <span class="fn">max</span>(<span class="num">0</span>, (gulumse * <span class="num">0.70</span> + yanak * <span class="num">0.30</span> - kas_catik * <span class="num">0.20</span>) * <span class="num">135</span>))
+
+<span class="cm"># 1: Gun Basi kaydi  |  2: Egitim Sonu kaydi -> +Delta % karsilastirma!</span>
+<span class="kw">if</span> key == <span class="fn">ord</span>(<span class="str">"1"</span>): gun_basi = (sinif_ort, len(result.faces))
+<span class="kw">if</span> key == <span class="fn">ord</span>(<span class="str">"2"</span>): egitim_sonu = (sinif_ort, len(result.faces))</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · BONUS 6: GOZ / AGIZ / KAFA ILE NEON FLAPPY OYUNU -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">34 / 37 · ÖZEL BONUS PROJE 6 · TEMASSIZ OYUN KONTROLÜ</div>
+        <h2 class="slide-title">Göz / Ağız / Kafa ile Neon Flappy (<code>bonus6_goz_flappy_oyunu.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python bonus_projeler/bonus6_goz_flappy_oyunu.py</code>
+              <button class="copy-btn" data-copy="python bonus_projeler/bonus6_goz_flappy_oyunu.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">3 Kontrol Modu + Rekor Yarışması (<code>m</code> Tuşu)</h3>
+              <ul class="bullet-list">
+                <li><strong>1. ↕️ Kafa Modu (En Kolay):</strong> Kuş doğrudan burnunun yüksekliğini takip eder — başını kaldırınca yükselir, eğince iner!</li>
+                <li><strong>2. 😉 Göz Kırpma (EAR):</strong> Göz açıklığı (EAR) düştüğü anda kuş zıplar — sınıfta en yüksek skor yarışması için birebir!</li>
+                <li><strong>3. 😮 Ağız Açma (MAR):</strong> Ağzını açtıkça kuş havalanır; ek paket (<code>pyautogui</code>) kurmadan doğrudan OpenCV içinde çalışır.</li>
+                <li><span class="tag-mini">İpucu</span>Chrome Dino için aynı <code>EAR/MAR</code> koşuluna <code>pyautogui.press('space')</code> ekleyebilirsin · <span class="tag-mini tag-peach">F Tuşu</span>Rehber!</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>bonus_projeler/bonus6_goz_flappy_oyunu.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="bonus6_goz_flappy_oyunu.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="bonus6_goz_flappy_oyunu.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="bonus6_goz_flappy_oyunu.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># 3 temassiz kontrol modu: Kafa (burun), Goz Kirpma (EAR), Agiz Acma (MAR)</span>
+<span class="kw">if</span> mod_idx == <span class="num">0</span>:
+    _, burun_y = canvas.<span class="fn">screen</span>(p[<span class="num">1</span>])      <span class="cm"># kus burnunu takip eder!</span>
+    kus_y += (hedef_y - kus_y) * <span class="num">0.28</span>
+<span class="kw">elif</span> mod_idx == <span class="num">1</span> <span class="kw">and</span> blink.blinks &gt; son_blink:
+    zipla = <span class="kw">True</span>                          <span class="cm"># goz kirpinca zipla!</span>
+<span class="kw">elif</span> mod_idx == <span class="num">2</span> <span class="kw">and</span> mar &gt; <span class="num">0.32</span>:
+    zipla = <span class="kw">True</span>                          <span class="cm"># agiz acinca zipla!</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · BONUS 7: TAS - KAGIT - MAKAS OYUNU -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">35 / 37 · ÖZEL BONUS PROJE 7 · YAPAY ZEKÂYA KARŞI OYUN</div>
+        <h2 class="slide-title">Taş–Kağıt–Makas Oyunu (<code>bonus7_tas_kagit_makas.py</code>)</h2>
+        <div class="grid-2-code">
+          <div>
+            <div class="cmd-block">
+              <code>python bonus_projeler/bonus7_tas_kagit_makas.py</code>
+              <button class="copy-btn" data-copy="python bonus_projeler/bonus7_tas_kagit_makas.py">Kopyala</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1.05rem; margin-bottom:8px;">21 El Eklem Noktasından Anlık Hamle Tanıma</h3>
+              <ul class="bullet-list">
+                <li><strong>✊ TAŞ:</strong> <code>0–1</code> açık parmak (yumruk) · <strong>🖐️ KAĞIT:</strong> <code>4–5</code> açık parmak · <strong>✌️ MAKAS:</strong> İşaret + orta açık, diğerleri kapalı.</li>
+                <li><strong>Boşluk (Space) Tuşu:</strong> Ekranda <strong>3 – 2 – 1</strong> geri sayımı başlar; süre bitince kameradaki el hamlen yapay zekâyla kapışır!</li>
+                <li><strong>Canlı Skor &amp; Galibiyet Serisi:</strong> Üst tabelada <code>SEN : BİLGİSAYAR</code> skoru, beraberlik ve seri takibi otomatik tutulur.</li>
+                <li><span class="tag-mini">c Tuşu</span>Skoru sıfırla · <span class="tag-mini tag-peach">F Tuşu</span>Özellikler &amp; Kullanım rehberi.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-card">
+            <div class="code-head">
+              <div class="dots-mac"><span></span><span></span><span></span></div>
+              <span>bonus_projeler/bonus7_tas_kagit_makas.py</span>
+              <div class="code-actions">
+                <button class="copy-btn" data-view-full="bonus7_tas_kagit_makas.py">👁 Tam Kod</button>
+                <button class="copy-btn" data-copy-full="bonus7_tas_kagit_makas.py">📋 Tam Kodu Kopyala</button>
+                <button class="dl-btn" data-download-py="bonus7_tas_kagit_makas.py">⬇ .py</button>
+              </div>
+            </div>
+            <pre class="code-pre"><span class="cm"># 21 el noktasindan acik/kapali parmak durumlarini oku</span>
+<span class="kw">def</span> <span class="fn">hamle_tani</span>(points):
+    st = <span class="fn">finger_states</span>(points)
+    acik = <span class="fn">sum</span>(<span class="num">1</span> <span class="kw">for</span> v <span class="kw">in</span> st.<span class="fn">values</span>() <span class="kw">if</span> v <span class="kw">is True</span>)
+    <span class="kw">if</span> acik &lt;= <span class="num">1</span>: <span class="kw">return</span> <span class="str">"TAŞ"</span>
+    <span class="kw">if</span> acik &gt;= <span class="num">4</span>: <span class="kw">return</span> <span class="str">"KAĞIT"</span>
+    <span class="kw">if</span> st[<span class="str">"işaret"</span>] <span class="kw">and</span> st[<span class="str">"orta"</span>] <span class="kw">and not</span> st[<span class="str">"yüzük"</span>]:
+        <span class="kw">return</span> <span class="str">"MAKAS"</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW · SONUC: BUGUN NELER YAPTIK & YOL HARITASI -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">36 / 37 · SONUÇ &amp; ÖZET</div>
+        <h2 class="slide-title">Bugün 4 Saatte Neler Başardık?</h2>
+        <p class="slide-lead">Sıfırdan başlayarak bir dizüstü kamerasını gerçek zamanlı bilgisayarlı görü ve yapay zekâ etkileşimine dönüştürdük:</p>
+
+        <div class="grid-2" style="margin-bottom:14px;">
+          <div class="card card-mint">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.08rem; margin-bottom:10px;">✅ Bugün Tamamladıklarımız</h3>
+            <ul class="bullet-list">
+              <li><strong>1. Kurulum &amp; Temeller:</strong> Python 3.12, <code>.venv</code>, kamera döngüsü, BGR/HSV/LAB, Otsu eşikleme ve konturları kurduk.</li>
+              <li><strong>2. Proje 1 (Yüz &amp; Göz):</strong> 478 yüz noktası, EMA yumuşatma, mesafeden bağımsız EAR göz kırpma ve baş yönelimi ölçtük.</li>
+              <li><strong>3. Proje 2 (El Jestleri):</strong> 21 el eklemi, açılar, Neon Hava Çizimi, 1–5 parmak renk paleti ve yumrukla silme yaptık.</li>
+              <li><strong>4. Proje 3 &amp; 7 Bonus:</strong> Cilt analizi, Neon AR VFX, A/B Işık, Sınıf Enerji Ölçer, Gözle Flappy ve Taş–Kağıt–Makas!</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:1.08rem; margin-bottom:10px;">🚀 Buradan Sonra Nereye?</h3>
+            <div class="pipe-flow" style="margin-bottom:12px;">
+              <span class="pipe-step">OpenCV</span><span class="pipe-arrow">→</span>
+              <span class="pipe-step">MediaPipe</span><span class="pipe-arrow">→</span>
+              <span class="pipe-step">YOLO</span><span class="pipe-arrow">→</span>
+              <span class="pipe-step">PyTorch</span>
+            </div>
+            <ul class="bullet-list">
+              <li><strong>Geliştir:</strong> Bugünkü kodlara göz kapalı alarmı, şekil tanıma veya kendi AR efektini ekleyip GitHub profiline koy!</li>
+              <li><strong>İleri Adım:</strong> Nesne tespiti için <strong>Ultralytics YOLO</strong>, veri setleri için <strong>Roboflow</strong> ve <strong>Kaggle</strong>'ı incele.</li>
+              <li><strong>Etik Bilinç:</strong> Bir kameranın neyi ölçebildiğini, neyi ölçemediğini ve açık kaynak lisanslarını her projede sorgula.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 37 · KAPANIS & ODULLU YARISMA DAVETI (Sorular yalnızca yerel yarisma.html dosyasındadır) -->
+    <section class="slide">
+      <div class="slide-inner" style="text-align:center; max-width:860px;">
+        <img src="assets/seis-logo.png" alt="SEIS Logo" style="width:74px; height:74px; border-radius:50%; margin-bottom:14px; border:2px solid var(--border-mint); box-shadow:0 0 30px rgba(108,232,170,0.35);" />
+        <div class="eyebrow" style="justify-content:center;">37 / 37 · 19:40 – 20:00 · 🏆 FİNAL ETAP</div>
+        <h2 class="slide-title" style="font-size:clamp(2rem, 4.4vw, 3.4rem);">🏆 Ödüllü OpenCV Bilgi Yarışması!</h2>
+        <p class="slide-lead" style="margin:0 auto 22px;">
+          Bugün öğrendiğimiz piksel matrisleri, BGR tuzağı, Otsu, 478 yüz noktası, EAR göz kırpma, histerezis ve cilt analizi konularından oluşan <strong>12 soruluk canlı yarışma</strong> 19:40'ta sahnede başlıyor!
+        </p>
+
+        <div class="grid-3" style="text-align:left; margin-bottom:24px;">
+          <div class="card card-mint">
+            <div class="stat-val" style="font-size:1.45rem;">17 Hazır Kod</div>
+            <div class="stat-lbl">Tüm 10 ders örneği ve 7 bonus proje (Flappy &amp; Taş-Kağıt-Makas dahil) tek tıkla kopyalanıp indirilebilir.</div>
+          </div>
+            <div class="card">
+            <div class="stat-val" style="font-size:1.38rem; color:var(--amber);">🏆 Sadece 1.'ye Ödül</div>
+            <div class="stat-lbl">Yarışmada <strong>yalnızca 1. olan şampiyona</strong> podyumda açıklanacak sürpriz büyük ödül verilecek!</div>
+          </div>
+          <div class="card">
+            <div class="stat-val" style="font-size:1.45rem;">SEIS · 1108</div>
+            <div class="stat-lbl">27 Kasım Cuma · Katılımın için teşekkürler — bir sonraki IT Workshop'ta görüşmek üzere!</div>
+          </div>
+        </div>
+
+        <div class="btn-row" style="justify-content:center;">
+          <button class="btn-primary" onclick="goToSlide(0)">↺ Sunumu Başa Al</button>
+          <a href="kisi_sayaci.html" class="btn-ghost" style="text-decoration:none;">📷 Canlı Sınıf Kişi Sayacı</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Simple Bottom Prev / Next Dock -->
+  <div class="dock" id="dock">
+    <button class="dock-btn" id="prevBtn" title="Önceki slayt (←)">←</button>
+    <span class="dock-counter" id="dockCounter" title="Slayt haritasını aç (G)" style="cursor:pointer;">01 / 37</span>
+    <button class="dock-btn" id="nextBtn" title="Sonraki slayt (→)">→</button>
+  </div>
+
+  <!-- Floating Presenter Timer Pill (Hidden until active) -->
+  <div class="timer-pill" id="timerPill">
+    <span class="timer-dot"></span>
+    <span id="timerDisplay">10:00</span>
+    <button class="timer-mini-btn" id="timerToggleBtn" title="Duraklat / Devam">⏸</button>
+    <button class="timer-mini-btn" id="timerCloseBtn" title="Sayacı kapat">✕</button>
+  </div>
+
+  <!-- Stage Laser Pointer Dot -->
+  <div class="laser-dot" id="laserDot"></div>
+
+  <!-- Stage Blackout Curtain (B key) — Live 60FPS Stage Visualizer -->
+  <div class="blackout-curtain" id="blackoutCurtain">
+    <canvas id="blackoutCanvas"></canvas>
+    <div class="bo-rays"></div>
+    <div class="bo-hud-corner tl"><span>SEIS::VISION_ENGINE</span></div>
+    <div class="bo-hud-corner tr"><span class="bo-rec-dot"></span><span>BBF · 1108 · LIVE</span></div>
+    <div class="bo-hud-corner bl"><span>CV2 + MEDIAPIPE · 60 FPS</span></div>
+    <div class="bo-hud-corner br"><span>TIKLA: ENERJİ PATLAMASI</span></div>
+    <div class="bo-center">
+      <div class="blackout-logo-stage" id="boLogoStage">
+        <div class="bo-bloom"></div>
+        <div class="bo-hud-ring"></div>
+        <div class="blackout-spin-ring"></div>
+        <div class="blackout-logo-wrap">
+          <img src="assets/seis-logo.png" alt="SEIS" />
+        </div>
+      </div>
+      <div class="blackout-txt">SEIS · OpenCV ATÖLYESİ</div>
+      <div class="blackout-meta-row">
+        <span class="blackout-pill">⚡ IT WORKSHOP · PYTHON &amp; COMPUTER VISION</span>
+        <span class="blackout-clock" id="boClock">--:--:--</span>
+      </div>
+      <div class="blackout-sub">Sunuma dönmek için <code>B</code> veya <code>ESC</code> tuşuna basın</div>
+    </div>
+  </div>
+
+  <!-- Presenter Speaker Notes Bar (N key, hidden by default) -->
+  <div class="speaker-note" id="speakerNote">
+    <span class="sn-badge">🎙 SAHNE NOTU (N)</span>
+    <span id="speakerNoteText"></span>
+  </div>
+
+  <!-- Lightbox Modal for Visual Guides & Full Python Files -->
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-inner" id="lightboxBody"></div>
+  </div>
+
+  <div class="toast" id="toast">Panoya kopyalandı!</div>
+
+  <script src="codes.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

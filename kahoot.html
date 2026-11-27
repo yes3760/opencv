@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEIS OpenCV Atölyesi — Canlı Kahoot (Eğitmen Ekranı)</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    :root { --bg:#16040d; --card:rgba(46,11,28,.78); --mint:#6ce8aa; --cream:#f7ecda; --peach:#eba182; --gold:#f4c97a; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:radial-gradient(circle at top,#3c0b22,var(--bg) 72%); color:var(--cream); min-height:100vh; padding:24px; display:flex; flex-direction:column; align-items:center; }
+    .wrap { width:min(1120px,100%); margin:auto; }
+    .card { background:var(--card); border:1px solid rgba(108,232,170,.36); border-radius:22px; padding:26px; backdrop-filter:blur(14px); }
+    h1 { font-size:clamp(1.7rem,3.4vw,2.6rem); margin-bottom:8px; }
+    .btn { padding:12px 24px; border-radius:999px; border:none; background:var(--mint); color:#120209; font-weight:800; font-size:1rem; cursor:pointer; }
+    .btn.ghost { background:rgba(247,236,218,.1); color:var(--cream); border:1px solid rgba(247,236,218,.25); }
+    .grid2 { display:grid; grid-template-columns:320px 1fr; gap:24px; align-items:start; }
+    .qr-box { background:#fff; padding:14px; border-radius:18px; text-align:center; color:#120209; }
+    .qr-box img { width:256px; height:256px; display:block; margin:0 auto 8px; }
+    .room-code { font-family:monospace; font-size:1.5rem; font-weight:900; letter-spacing:.12em; color:#2b0818; margin:4px 0; }
+    .players { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+    .pchip { padding:8px 14px; border-radius:999px; background:rgba(108,232,170,.16); border:1px solid var(--mint); font-weight:700; font-size:.95rem; }
+    .timer-bar { height:12px; border-radius:999px; background:rgba(255,255,255,.12); overflow:hidden; margin:14px 0 20px; }
+    .timer-fill { height:100%; background:linear-gradient(90deg,var(--mint),var(--gold)); transition:width .15s linear; }
+    .opts { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+    .opt { padding:20px; border-radius:16px; font-size:1.22rem; font-weight:700; display:flex; justify-content:space-between; align-items:center; border:2px solid transparent; }
+    .o0{background:#c83349} .o1{background:#1d6fa5} .o2{background:#c98a18} .o3{background:#238c5a}
+    .opt.dim{opacity:.32} .opt.win{border-color:#fff; box-shadow:0 0 26px rgba(108,232,170,.75); transform:scale(1.02);}
+    .lb { margin-top:16px; display:flex; flex-direction:column; gap:8px; }
+    .lb-row { display:flex; justify-content:space-between; padding:11px 16px; border-radius:12px; background:rgba(16,3,9,.72); font-size:1.05rem; font-weight:700; }
+    .lb-row:first-child { border:1.5px solid var(--gold); color:var(--gold); }
+    .hidden { display:none!important; }
+    input { padding:12px 16px; border-radius:12px; border:1px solid var(--mint); background:#0f0208; color:var(--cream); font-size:1.1rem; text-align:center; width:240px; letter-spacing:.12em; }
+
+    /* 3D Black & Gold Winner Podium + Confetti */
+    #confettiCanvas { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:999; }
+    .podium-stage {
+      position:relative;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      gap:10px;
+      padding:36px 12px 14px;
+      margin:10px auto 26px;
+      max-width:760px;
+    }
+    .podium-stage::after {
+      content:'';
+      position:absolute;
+      left:8%; right:8%; bottom:0;
+      height:26px;
+      background:radial-gradient(ellipse at center, rgba(244,201,122,.28), transparent 72%);
+      filter:blur(8px);
+      pointer-events:none;
+    }
+    .p-col {
+      flex:1;
+      max-width:210px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      opacity:0;
+      transform:translateY(48px) scale(.94);
+    }
+    .p-col.show { animation:podiumRise .75s cubic-bezier(.22,1,.36,1) forwards; }
+    .p-col.p3.show { animation-delay:.15s; }
+    .p-col.p2.show { animation-delay:.55s; }
+    .p-col.p1.show { animation-delay:1.0s; }
+    @keyframes podiumRise {
+      to { opacity:1; transform:translateY(0) scale(1); }
+    }
+    .p-crown { font-size:2rem; margin-bottom:2px; filter:drop-shadow(0 0 12px rgba(244,201,122,.8)); }
+    .p-name {
+      font-size:1.25rem; font-weight:800; color:var(--cream);
+      text-shadow:0 2px 12px rgba(0,0,0,.7);
+      margin-bottom:4px; word-break:break-word;
+    }
+    .p-col.p1 .p-name { font-size:1.5rem; color:var(--gold); }
+    .p-pts {
+      font-family:monospace; font-size:.92rem; font-weight:700; color:var(--mint);
+      background:rgba(16,3,9,.8); border:1px solid rgba(108,232,170,.35);
+      padding:3px 11px; border-radius:999px; margin-bottom:14px;
+    }
+    .p-block {
+      position:relative;
+      width:100%;
+      border-radius:10px 10px 4px 4px;
+      background:linear-gradient(180deg,#2c2c30 0%,#161619 18%,#0b0b0d 100%);
+      border:1px solid rgba(255,255,255,.12);
+      border-top:5px solid #3c3c42;
+      box-shadow:0 24px 50px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.2);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .p-col.p1 .p-block {
+      height:215px;
+      border-top-color:#52462e;
+      box-shadow:0 28px 60px rgba(0,0,0,.85), 0 0 42px rgba(244,201,122,.22), inset 0 1px 0 rgba(244,201,122,.35);
+    }
+    .p-col.p2 .p-block { height:152px; }
+    .p-col.p3 .p-block { height:128px; }
+    .p-num {
+      font-size:5.2rem; font-weight:900; line-height:1;
+      background:linear-gradient(180deg,#fff2b2 0%,#f5c542 42%,#b87d14 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      filter:drop-shadow(0 6px 14px rgba(245,197,66,.38));
+    }
+    .p-col.p1 .p-num { font-size:6.4rem; }
+    @media(max-width:800px){ .grid2,.opts{grid-template-columns:1fr;} .p-num{font-size:3.6rem;} .p-col.p1 .p-num{font-size:4.5rem;} }
+  </style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+<div class="wrap">
+  <!-- Password Lock (Questions are cryptographically encrypted until unlocked!) -->
+  <div id="authBox" class="card" style="max-width:450px;margin:70px auto;text-align:center">
+    <div style="font-size:2.4rem">🔒</div>
+    <h1 style="font-size:1.6rem;margin:8px 0">SEIS Canlı Kahoot — Eğitmen</h1>
+    <p style="color:#d9c5b4;font-size:.9rem;margin-bottom:14px">Sorular şifrelidir; yalnızca eğitmen şifresiyle çözülür.</p>
+    <input type="password" id="pinInp" placeholder="Şifre" autofocus /><br/><br/>
+    <button class="btn" id="loginBtn">🔓 Odayı Aç</button>
+    <p id="authErr" style="color:#ff8c85;margin-top:10px;min-height:20px"></p>
+  </div>
+
+  <!-- Host App -->
+  <div id="hostApp" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="assets/seis-logo.png" alt="SEIS" style="width:36px;height:36px;border-radius:50%" />
+        <div>
+          <div style="font-family:monospace;color:var(--mint);font-weight:800">SEIS IT WORKSHOP · CANLI KAHOOT</div>
+          <div id="connStatus" style="font-size:.78rem;color:#d9c5b4">Canlı oda başlatılıyor…</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" id="resetBtn">↺ Yeni Oyun</button>
+        <button class="btn" id="actionBtn">🚀 Yarışmayı Başlat</button>
+      </div>
+    </div>
+
+    <!-- LOBBY -->
+    <div id="lobbyView" class="card grid2">
+      <div class="qr-box">
+        <img id="qrImg" alt="Katılım QR Kodu" />
+        <div class="room-code" id="roomCodeTxt">----</div>
+        <div style="font-size:.74rem;color:#444;word-break:break-all" id="joinUrlTxt"></div>
+      </div>
+      <div>
+        <h1>📱 QR Kodu Okut ve Katıl!</h1>
+        <div style="margin:10px 0 14px; padding:12px 16px; border-radius:14px; background:linear-gradient(90deg, rgba(244,201,122,.22), rgba(108,232,170,.14)); border:1.5px solid var(--gold); box-shadow:0 0 24px rgba(244,201,122,.18);">
+          <div style="font-family:monospace; color:var(--gold); font-weight:900; font-size:.86rem; letter-spacing:.08em;">🏆 ÖDÜL KURALI DUYURUSU</div>
+          <div style="color:#fff; font-size:1.06rem; font-weight:700; margin-top:3px;">Yarışma sonunda <span style="color:var(--gold); text-decoration:underline;">SADECE 1. olan şampiyona</span> <strong>Sürpriz Büyük Ödül</strong> verilecektir!</div>
+        </div>
+        <p style="color:#d9c5b4;font-size:1rem">4G / 5G veya Wi-Fi fark etmeksizin telefonundan QR kodu okut, adını yaz! Sorular yalnızca bu ekranda görünür — <strong>en hızlı doğru cevaplayan 1000 puana kadar kazanır!</strong></p>
+        <div style="margin-top:18px;font-family:monospace;color:var(--mint);font-size:1.1rem">Katılan Oyuncular (<span id="pCount">0</span>)</div>
+        <div class="players" id="playerList"></div>
+      </div>
+    </div>
+
+    <!-- QUESTION / REVEAL -->
+    <div id="qView" class="card hidden">
+      <div style="display:flex;justify-content:space-between;font-family:monospace;font-size:1rem;color:var(--mint)">
+        <span id="qMeta">SORU 1 / 12</span>
+        <span id="ansCount">Cevaplayan: 0 / 0</span>
+        <span id="timeTxt" style="color:var(--gold);font-weight:800">20 sn</span>
+      </div>
+      <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+      <h1 id="qText"></h1>
+      <div class="opts" id="optsBox"></div>
+      <div id="expBox" class="hidden" style="margin-top:16px;padding:14px 18px;border-radius:12px;background:rgba(108,232,170,.12);border-left:4px solid var(--mint);font-size:1rem"></div>
+      <div id="lbWrap" class="hidden">
+        <div style="margin-top:16px;font-family:monospace;color:var(--gold);font-weight:700">🏆 CANLI LİDERLİK TABLOSU (İLK 5)</div>
+        <div class="lb" id="lbList"></div>
+      </div>
+    </div>
+
+    <!-- PODIUM -->
+    <div id="podiumView" class="card hidden" style="text-align:center; background:radial-gradient(circle at 50% 20%, rgba(244,201,122,.14), rgba(14,4,9,.94) 68%);">
+      <div style="font-family:monospace; color:var(--gold); letter-spacing:.18em; font-weight:800; font-size:.86rem; margin-bottom:4px;">🏆 SEIS OPENCV ATÖLYESİ · FİNAL SIRALAMASI</div>
+      <h1>Tebrikler Şampiyon!</h1>
+      <p style="color:var(--gold); font-weight:800; font-size:1.1rem; margin-top:4px;">🎉 SÜRPRİZ BÜYÜK ÖDÜL AÇIKLANDI: 1. Olan Şampiyonumuz <strong>TEKNİK GEZİ</strong> Kazandı!</p>
+      <div class="podium-stage" id="podiumStage"></div>
+      <div style="margin-bottom:14px;">
+        <button class="btn ghost" id="boomBtn" style="font-size:.88rem; padding:9px 18px;">🎉 Konfeti Patlat!</button>
+      </div>
+      <div class="lb" id="finalLb" style="max-width:580px;margin:8px auto 0"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ENC = {"salt": "SEIS_OPENCV_2026", "mac": "4da361091a5d0e1d91241de87a3f937375edb07a61092aa6eabb7f4d119154f5", "ct": "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"};
+
+async function decryptQuestions(password) {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', salt: enc.encode(ENC.salt), iterations: 100000, hash:'SHA-256' }, baseKey, 256);
+  const key = new Uint8Array(bits);
+  const ct = Uint8Array.from(atob(ENC.ct), c => c.charCodeAt(0));
+
+  const macBuf = new Uint8Array(key.length + ct.length);
+  macBuf.set(key, 0); macBuf.set(ct, key.length);
+  const macHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', macBuf))).map(b => b.toString(16).padStart(2,'0')).join('');
+  if (macHash !== ENC.mac) return null;
+
+  const out = new Uint8Array(ct.length);
+  for (let off = 0, i = 0; off < ct.length; off += 32, i++) {
+    const blk = new Uint8Array(36);
+    blk.set(key, 0);
+    blk[32] = (i >>> 24) & 255; blk[33] = (i >>> 16) & 255; blk[34] = (i >>> 8) & 255; blk[35] = i & 255;
+    const ks = new Uint8Array(await crypto.subtle.digest('SHA-256', blk));
+    for (let j = 0; j < 32 && off + j < ct.length; j++) out[off + j] = ct[off + j] ^ ks[j];
+  }
+  return JSON.parse(new TextDecoder().decode(out));
+}
+
+const Q_TIME = 20;
+const LETTERS = ['A','B','C','D'];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let QUESTIONS = [];
+let peer = null;
+let phase = 'lobby';
+let qIdx = -1;
+let qStart = 0;
+let timerInt = null;
+const players = new Map(); // conn.peer -> { name, score, conn }
+let answers = new Map();   // conn.peer -> { choice, correct, points }
+
+function getLeaderboard() {
+  return [...players.entries()]
+    .map(([id, p]) => ({ id, name: p.name, score: p.score }))
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+    .map((r, i) => ({ ...r, rank: i + 1 }));
+}
+
+function broadcastState() {
+  const lb = getLeaderboard();
+  const rem = phase === 'question' ? Math.max(0, Q_TIME - (Date.now() - qStart) / 1000) : 0;
+  players.forEach((p, id) => {
+    if (!p.conn || !p.conn.open) return;
+    const rank = lb.find(r => r.id === id)?.rank || 0;
+    p.conn.send({
+      type: 'state',
+      phase, qIdx, total: QUESTIONS.length, remaining: rem,
+      score: p.score, rank,
+      answered: answers.has(id),
+      lastResult: phase === 'reveal' ? (answers.get(id) || null) : null
+    });
+  });
+}
+
+function renderHost() {
+  document.getElementById('lobbyView').classList.toggle('hidden', phase !== 'lobby');
+  document.getElementById('qView').classList.toggle('hidden', !(phase === 'question' || phase === 'reveal'));
+  document.getElementById('podiumView').classList.toggle('hidden', phase !== 'podium');
+
+  const act = document.getElementById('actionBtn');
+  if (phase === 'lobby') {
+    act.textContent = '🚀 Yarışmayı Başlat';
+    document.getElementById('pCount').textContent = players.size;
+    document.getElementById('playerList').innerHTML = [...players.values()].map(p => `<span class="pchip">${esc(p.name)}</span>`).join('');
+  } else if (phase === 'question' || phase === 'reveal') {
+    const q = QUESTIONS[qIdx];
+    const rem = phase === 'question' ? Math.max(0, Q_TIME - (Date.now() - qStart) / 1000) : 0;
+    act.textContent = phase === 'question' ? '👁 Cevabı Göster' : (qIdx + 1 < QUESTIONS.length ? 'Sonraki Soru →' : '🏆 Podyumu Göster');
+    document.getElementById('qMeta').textContent = `SORU ${qIdx + 1} / ${QUESTIONS.length}`;
+    document.getElementById('ansCount').textContent = `Cevaplayan: ${answers.size} / ${players.size}`;
+    document.getElementById('timeTxt').textContent = phase === 'question' ? `${Math.ceil(rem)} sn` : 'SÜRE BİTTİ';
+    document.getElementById('timerFill').style.width = `${Math.max(0, (rem / Q_TIME) * 100)}%`;
+    document.getElementById('qText').textContent = q.q;
+    const counts = [0, 0, 0, 0];
+    answers.forEach(a => { if (a.choice >= 0 && a.choice < 4) counts[a.choice]++; });
+    document.getElementById('optsBox').innerHTML = q.opts.map((t, i) => {
+      const cls = phase === 'reveal' ? (i === q.ans ? 'win' : 'dim') : '';
+      const cnt = phase === 'reveal' ? `<span style="font-size:1rem;background:rgba(0,0,0,.3);padding:4px 10px;border-radius:999px">${counts[i]} kişi</span>` : '';
+      return `<div class="opt o${i} ${cls}"><span>${LETTERS[i]}) ${t}</span>${cnt}</div>`;
+    }).join('');
+    const exp = document.getElementById('expBox');
+    exp.classList.toggle('hidden', phase !== 'reveal');
+    exp.textContent = '✓ ' + q.exp;
+    document.getElementById('lbWrap').classList.toggle('hidden', phase !== 'reveal');
+    document.getElementById('lbList').innerHTML = getLeaderboard().slice(0, 5)
+      .map(r => `<div class="lb-row"><span>#${r.rank} · ${esc(r.name)}</span><span>${r.score} puan</span></div>`).join('');
+  } else if (phase === 'podium') {
+    act.textContent = '↺ Yeni Oyun';
+    const lb = getLeaderboard();
+    const p1 = lb[0] || { name: '—', score: 0 };
+    const p2 = lb[1] || { name: '—', score: 0 };
+    const p3 = lb[2] || { name: '—', score: 0 };
+    const stage = document.getElementById('podiumStage');
+    if (stage.dataset.rendered !== '1') {
+      stage.dataset.rendered = '1';
+      stage.innerHTML = `
+        <div class="p-col p2 show">
+          <div class="p-name">${esc(p2.name)}</div>
+          <div class="p-pts">${p2.score} puan</div>
+          <div class="p-block"><span class="p-num">2</span></div>
+        </div>
+        <div class="p-col p1 show">
+          <div class="p-crown">👑</div>
+          <div class="p-name">${esc(p1.name)}</div>
+          <div style="font-size:.76rem; font-weight:800; color:#120209; background:var(--gold); padding:3px 10px; border-radius:999px; margin-bottom:6px;">🎟️ TEKNİK GEZİ KAZANANI</div>
+          <div class="p-pts">${p1.score} puan</div>
+          <div class="p-block"><span class="p-num">1</span></div>
+        </div>
+        <div class="p-col p3 show">
+          <div class="p-name">${esc(p3.name)}</div>
+          <div class="p-pts">${p3.score} puan</div>
+          <div class="p-block"><span class="p-num">3</span></div>
+        </div>`;
+      launchConfetti();
+      setTimeout(launchConfetti, 1050);
+      setTimeout(launchConfetti, 1900);
+    }
+    const rest = lb.slice(3);
+    document.getElementById('finalLb').innerHTML = rest.length
+      ? rest.map(r => `<div class="lb-row"><span>#${r.rank} · ${esc(r.name)}</span><span>${r.score} puan</span></div>`).join('')
+      : '';
+  }
+}
+
+/* Confetti Cannon Engine */
+let confettiPieces = [], confettiRaf = null;
+function launchConfetti() {
+  const c = document.getElementById('confettiCanvas');
+  const ctx = c.getContext('2d');
+  c.width = innerWidth; c.height = innerHeight;
+  const colors = ['#f5c542','#6ce8aa','#f7ecda','#eba182','#ff5f8f','#7cc4fa'];
+  for (let side of [0.15, 0.5, 0.85]) {
+    for (let i = 0; i < 48; i++) {
+      const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.35;
+      const spd = 7 + Math.random() * 13;
+      confettiPieces.push({
+        x: c.width * side, y: c.height * 0.78,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 3,
+        w: 7 + Math.random() * 7, h: 4 + Math.random() * 6,
+        rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.28,
+        col: colors[Math.floor(Math.random() * colors.length)],
+        life: 140 + Math.random() * 60
+      });
+    }
+  }
+  if (!confettiRaf) {
+    (function step() {
+      ctx.clearRect(0, 0, c.width, c.height);
+      confettiPieces = confettiPieces.filter(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.24; p.vx *= 0.99; p.rot += p.vr; p.life--;
+        if (p.life <= 0 || p.y > c.height + 30) return false;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.globalAlpha = Math.min(1, p.life / 35);
+        ctx.fillStyle = p.col;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+        return true;
+      });
+      if (confettiPieces.length) confettiRaf = requestAnimationFrame(step);
+      else { ctx.clearRect(0, 0, c.width, c.height); confettiRaf = null; }
+    })();
+  }
+}
+document.getElementById('boomBtn').onclick = launchConfetti;
+
+function revealQuestion() {
+  phase = 'reveal';
+  clearInterval(timerInt);
+  renderHost();
+  broadcastState();
+}
+
+function nextStep() {
+  if (phase === 'lobby' || phase === 'reveal') {
+    if (qIdx + 1 < QUESTIONS.length) {
+      qIdx++;
+      answers.clear();
+      qStart = Date.now();
+      phase = 'question';
+      clearInterval(timerInt);
+      timerInt = setInterval(() => {
+        const rem = Q_TIME - (Date.now() - qStart) / 1000;
+        if (rem <= 0) revealQuestion();
+        else { renderHost(); broadcastState(); }
+      }, 250);
+    } else {
+      phase = 'podium';
+    }
+    renderHost(); broadcastState();
+  } else if (phase === 'question') {
+    revealQuestion();
+  } else {
+    resetGame();
+  }
+}
+
+function resetGame() {
+  clearInterval(timerInt);
+  phase = 'lobby'; qIdx = -1; answers.clear();
+  document.getElementById('podiumStage').dataset.rendered = '';
+  players.forEach(p => { p.score = 0; });
+  renderHost(); broadcastState();
+}
+
+function startPeerHost() {
+  const code = 'SEIS-' + Math.floor(1000 + Math.random() * 9000);
+  peer = new Peer(code);
+  peer.on('open', id => {
+    const base = location.href.replace(/kahoot\.html.*$/, '');
+    const joinUrl = `${base}katil.html?oda=${encodeURIComponent(id)}`;
+    document.getElementById('connStatus').textContent = `✓ Canlı oda aktif (${id})`;
+    document.getElementById('roomCodeTxt').textContent = id;
+    document.getElementById('joinUrlTxt').textContent = joinUrl;
+    document.getElementById('qrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(joinUrl);
+  });
+  peer.on('error', err => {
+    document.getElementById('connStatus').textContent = 'Bağlantı hatası: ' + err.type;
+  });
+  peer.on('connection', conn => {
+    conn.on('data', msg => {
+      if (msg.type === 'join') {
+        const name = String(msg.name || 'Oyuncu').trim().slice(0, 20) || 'Oyuncu';
+        players.set(conn.peer, { name, score: 0, conn });
+        renderHost(); broadcastState();
+      } else if (msg.type === 'answer') {
+        if (phase === 'question' && players.has(conn.peer) && !answers.has(conn.peer)) {
+          const rem = Math.max(0, Q_TIME - (Date.now() - qStart) / 1000);
+          const correct = Number(msg.choice) === QUESTIONS[qIdx].ans;
+          const points = correct ? Math.round(500 + 500 * (rem / Q_TIME)) : 0;
+          players.get(conn.peer).score += points;
+          answers.set(conn.peer, { choice: Number(msg.choice), correct, points });
+          if (answers.size >= players.size && players.size > 0) revealQuestion();
+          else { renderHost(); broadcastState(); }
+        }
+      }
+    });
+    conn.on('close', () => { players.delete(conn.peer); renderHost(); });
+  });
+}
+
+async function login() {
+  const pass = document.getElementById('pinInp').value.trim().toUpperCase();
+  const res = await decryptQuestions(pass);
+  if (!res) { document.getElementById('authErr').textContent = '✕ Hatalı şifre!'; return; }
+  QUESTIONS = res;
+  document.getElementById('authBox').classList.add('hidden');
+  document.getElementById('hostApp').classList.remove('hidden');
+  renderHost();
+  startPeerHost();
+}
+document.getElementById('loginBtn').onclick = login;
+document.getElementById('pinInp').onkeydown = e => { if (e.key === 'Enter') login(); };
+document.getElementById('actionBtn').onclick = nextStep;
+document.getElementById('resetBtn').onclick = resetGame;
+window.addEventListener('keydown', e => {
+  if (document.getElementById('hostApp').classList.contains('hidden')) return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextStep(); }
+  else if (e.key.toLowerCase() === 'f') {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+    else document.exitFullscreen().catch(() => {});
+  }
+});
+</script>
+</body>
+</html>
