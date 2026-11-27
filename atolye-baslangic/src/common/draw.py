@@ -219,7 +219,7 @@ def draw_help_overlay(img: np.ndarray, title: str, lines: list[str]) -> None:
     """'f' tuşuna basılınca ekran ortasında amaç ve kullanım rehberi kartı gösterir."""
     h, w = img.shape[:2]
     panel(img, 0, 0, w, h, alpha=0.58)
-    card_w = min(w - 48, 660)
+    card_w = min(w - 32, 740)
     line_h = 26
     card_h = min(h - 48, 96 + len(lines) * line_h)
     x1 = (w - card_w) // 2
