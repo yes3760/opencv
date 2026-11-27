@@ -21,6 +21,8 @@ import sys
 import time
 from pathlib import Path
 
+import os
+os.environ.setdefault("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS", "0")
 import cv2
 import numpy as np
 

@@ -9,7 +9,11 @@ perspektif dönüşümü (warpPerspective) ile düz taranmış belgeye çevirir.
 Tuşlar     : s: Belgeyi tara | f: Özellikler | q: Çıkış
 """
 
+import os
+import platform
 import time
+
+os.environ.setdefault("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS", "0")
 import cv2
 import numpy as np
 
@@ -39,18 +43,32 @@ def perspektif_duzelt(img: np.ndarray, kose: np.ndarray) -> np.ndarray:
 
 
 def kamera_ac():
-    for idx in (0, 1):
-        c = cv2.VideoCapture(idx)
-        if not c.isOpened():
-            c.release()
-            continue
-        for _ in range(20):
-            ok, frm = c.read()
-            if ok and frm is not None and frm.size > 0:
-                return c
-            time.sleep(0.04)
-        c.release()
-    return None
+    sistem = platform.system()
+    backendler = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY] if sistem == "Windows" else (
+        [cv2.CAP_AVFOUNDATION, cv2.CAP_ANY] if sistem == "Darwin" else [cv2.CAP_ANY]
+    )
+    yedek = None
+    for idx in (0, 1, 2):
+        for be in backendler:
+            c = cv2.VideoCapture(idx, be)
+            if not c.isOpened():
+                c.release()
+                continue
+            for _ in range(20):
+                ok, frm = c.read()
+                if ok and frm is not None and frm.size > 0:
+                    if frm.mean() >= 5.0:
+                        if yedek is not None:
+                            yedek.release()
+                        return c
+                    if yedek is None:
+                        yedek = c
+                        c = None
+                        break
+                time.sleep(0.04)
+            if c is not None:
+                c.release()
+    return yedek
 
 
 def main():

@@ -9,8 +9,11 @@ Tuşlar     : f: Özellikler rehberi  |  q veya Esc: Çıkış
 """
 
 import argparse
+import os
+import platform
 import time
 
+os.environ.setdefault("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS", "0")
 import cv2
 
 parser = argparse.ArgumentParser(description="İlk kamera görüntüsü")
@@ -19,31 +22,43 @@ parser.add_argument("--max-frames", type=int, default=0, help="Otomatik test iç
 args = parser.parse_args()
 source = int(args.source) if args.source.isdigit() else args.source
 
+
 def kamera_ac(kaynak):
-    """Kamerayı açar; Mac'te 0 numara (iPhone vb.) siyah/boş dönerse otomatik 1 numarayı dener."""
-    import platform
-    backend = cv2.CAP_AVFOUNDATION if platform.system() == "Darwin" and isinstance(kaynak, int) else cv2.CAP_ANY
+    """Windows (DSHOW + MSMF) ve Mac'te çalışan kamerayı otomatik bulur."""
+    if not isinstance(kaynak, int):
+        c = cv2.VideoCapture(kaynak)
+        return c if c.isOpened() else None
+
+    sistem = platform.system()
+    if sistem == "Windows":
+        backendler = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY]
+    elif sistem == "Darwin":
+        backendler = [cv2.CAP_AVFOUNDATION, cv2.CAP_ANY]
+    else:
+        backendler = [cv2.CAP_ANY]
+
     adaylar = [0, 1, 2] if kaynak == 0 else [kaynak]
     yedek = None
     for ad in adaylar:
-        c = cv2.VideoCapture(ad, backend) if isinstance(ad, int) else cv2.VideoCapture(ad)
-        if not c.isOpened():
-            c.release()
-            continue
-        for _ in range(25):
-            ok, test = c.read()
-            if ok and test is not None and test.size > 0:
-                if test.mean() >= 5.0 or not isinstance(ad, int):
-                    if yedek is not None:
-                        yedek.release()
-                    return c
-                if yedek is None:
-                    yedek = c
-                    c = None
-                    break
-            time.sleep(0.04)
-        if c is not None:
-            c.release()
+        for be in backendler:
+            c = cv2.VideoCapture(ad, be)
+            if not c.isOpened():
+                c.release()
+                continue
+            for _ in range(20):
+                ok, test = c.read()
+                if ok and test is not None and test.size > 0:
+                    if test.mean() >= 5.0:
+                        if yedek is not None:
+                            yedek.release()
+                        return c
+                    if yedek is None:
+                        yedek = c
+                        c = None
+                        break
+                time.sleep(0.04)
+            if c is not None:
+                c.release()
     return yedek
 
 
