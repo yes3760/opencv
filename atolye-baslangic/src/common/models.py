@@ -26,4 +26,4 @@ def require_model(path: Path) -> Path:
 
 def base_options(path: Path) -> BaseOptions:
     """Modeli CPU üzerinde çalıştıracak temel seçenekler."""
-    return BaseOptions(model_asset_path=str(require_model(path)))
+    return BaseOptions(model_asset_buffer=require_model(path).read_bytes())

@@ -64,7 +64,8 @@ def main() -> int:
         import numpy as np
         report(True, f"İçe aktarma: cv2 {cv2.__version__}, mediapipe {mp.__version__}, numpy {np.__version__}")
     except Exception as exc:  # kurulum sorunlarını kullanıcıya göstermek için
-        report(False, f"İçe aktarma başarısız: {exc}")
+        report(False, f"İçe aktarma başarısız: {exc}
+  -> Çözüm (bozuk paket/OneDrive): .venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir mediapipe==1.1.1 (veya klasörü C:\seis-opencv içine taşıyın)")
         return 1
 
     import config
